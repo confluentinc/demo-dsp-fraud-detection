@@ -1,0 +1,5 @@
+django==5.1.5
+faker==33.3.1
+gunicorn==23.0.0
+oracledb==2.5.1
+whitenoise==6.8.2
