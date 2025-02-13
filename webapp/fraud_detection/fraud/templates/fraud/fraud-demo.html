@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection Demo</title>
+    <!-- Include Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Add Bootstrap for Layouts -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Add FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* General Design */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to right, #eff3f6, #f8f9fb);
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            color: #fff;
+            text-align: center;
+            padding: 1.5em 0;
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        header i {
+            font-size: 1.4em;
+        }
+
+        .container {
+            padding-left: 2em;
+            padding-right: 2em;
+        }
+
+        .section {
+            border-radius: 12px;
+            background: #ffffff;
+            margin-bottom: 2em;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            padding: 2em;
+            transition: 0.3s ease-in-out;
+        }
+
+        .section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            text-align: left;
+            position: relative;
+            color: #444;
+        }
+
+        .section-title i {
+            color: #007bff;
+            margin-right: 0.5em;
+        }
+
+        .section-title:after {
+            content: "";
+            display: block;
+            height: 4px;
+            width: 50px;
+            background: #007bff;
+            margin-top: 0.3em;
+        }
+
+
+    .all-table-wrapper {
+        max-height: 33vh; /* Keep height restricted */
+        overflow-y: auto; /* Enable vertical scrolling for table contents */
+        overflow-x: auto; /* Enable horizontal scrolling if needed */
+        border: 1px solid #dee2e6;
+        {#padding: 1em;#}
+        background: #ffffff; /* Clean background for high contrast */
+        {#border-radius: 10px;#}
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    }
+
+    /* Table Styles */
+    table {
+        width: 100%;
+        border-spacing: 0;
+        border-collapse: collapse;
+        font-size: 0.9rem; /* Somewhat smaller font for readability */
+    }
+
+    thead {
+        background-color: #007bff; /* Matches your theme */
+        color: #fff;
+        position: sticky;
+        top: 0;
+        {#z-index: 20; /* Ensures sticky header stays above content */#}
+    }
+
+    thead th {
+        padding: 0.8em;
+        text-align: left; /* Align header text to the left */
+        font-weight: 600; /* Medium weight for header font */
+        border-right: 1px solid #e1e5eb;
+    }
+
+    thead th:last-child {
+        border-right: 0; /* Remove border on the last header column */
+    }
+
+        tbody tr {
+            transition: background-color 0.3s ease;
+        }
+
+
+        tbody td {
+            padding: 0.8em;
+            text-align: left; /* Align text to the left */
+            border-bottom: 1px solid #dee2e6;
+            white-space: nowrap; /* Prevent excessive wrapping */
+        }
+
+
+        table tbody tr:nth-child(odd) {
+            background-color: #f9f9f9;
+        }
+
+        table tbody tr:hover {
+            background-color: #f1f5fc;
+            cursor: pointer;
+            transition: background-color 0.3s ease-out;
+        }
+
+
+        /* Buttons and Inputs */
+        button {
+            border-radius: 25px;
+            padding: 0.5em 1.8em;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: 0.3s ease-in-out;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+            /* Scaling button to 0.98 to its original size */
+            box-shadow: 3px 2px 22px 1px rgba(0, 0, 0, 0.24);
+        }
+
+        .form-select {
+            padding: 0.6em;
+            border-radius: 25px;
+            border: 1px solid #dee2e6;
+        }
+
+        /* Footer Styling */
+        footer {
+            text-align: center;
+            padding: 2em 0;
+            background-color: #fff;
+            color: #6c757d;
+            margin-top: 2em;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        footer p {
+            margin: 0;
+            font-size: 0.9em;
+        }
+
+        /* Switch styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            display: none; /* Hide the default checkbox */
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 34px; /* For round slider edges */
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked + .slider {
+            background-color: #28a745; /* Green for ON */
+            box-shadow: 0 0 10px #28a745;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px); /* Move the slider to the ON position */
+        }
+
+        /* Optional animation */
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+        }
+
+
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <i class="fas fa-shield-alt"></i> Fraud Detection Dashboard
+    </header>
+
+    <main>
+        <div class="container">
+            <!-- HTML Section for Stream Real Transactions -->
+            <section class="section">
+                <h3 class="section-title"><i class="fas fa-cogs"></i> Transaction Settings</h3>
+                <div class="row">
+                    <div class="col-md-6 text-center">
+                        <h5>Stream Real Transactions</h5>
+                        <label class="switch">
+                            <input type="checkbox" id="real-transactions-toggle">
+                            <span class="slider"></span>
+                        </label>
+                        <p id="toggle-status" class="mt-2 text-secondary">Streaming is OFF</p>
+                    </div>
+                    <div class="col-md-6 text-center">
+                        <h5>Simulate Fraud</h5>
+                        <select id="fraud-type-dropdown" class="form-select">
+                            <option value="too_many_count">Burst Count Transaction</option>
+                            <option value="too_many_amount">Burst Amount Transaction</option>
+                            <option value="too_large">Large Amount Transaction</option>
+                            <option value="too_far">Foreign Transaction</option>
+                        </select>
+                        <button id="create-fraud-button" class="btn btn-primary mt-3">
+                            <i class="fas fa-exclamation-circle"></i> Commit Fraud
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title"><i class="fas fa-university"></i>All Transactions</h3>
+                <!-- All Transactions Table -->
+                <div class="all-table-wrapper">
+                    <table id="all-transactions-table">
+                        <thead>
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Customer Username</th>
+                                <th>Amount</th>
+                                <th>IP</th>
+                                <th>Occurred</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- All transactions will dynamically appear here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Fraud Detection Dashboard. All rights reserved.</p>
+    </footer>
+</body>
+<script>
+        // Initialize streaming interval variable
+        let transactionStreamInterval = null;
+        const allTransactionsTable = document.querySelector('#all-transactions-table tbody'); // Find the tbody element
+        const flaggedUsersTable = document.querySelector('#flagged-users-table tbody');
+        const flaggedTransactionsTable = document.querySelector('#flagged-transactions-table tbody');
+        const realTransactionToggle = document.getElementById('real-transactions-toggle'); // Get toggle element
+        const statusText = document.getElementById('toggle-status');
+        const fraudTypeSelector = document.getElementById('fraud-type-dropdown');
+        const createFraudTransactionButton = document.getElementById('create-fraud-button');
+        const createRealTransactionIntervalMS = 3500
+
+    // Function for toggling the Real Transactions stream
+            // Enable or disable continuous real transactions
+        realTransactionToggle.addEventListener("change", (event) => {
+            if (event.target.checked) {
+                statusText.textContent = "Streaming is ON";
+                statusText.classList.remove("text-secondary");
+                statusText.classList.add("text-success");
+                transactionStreamInterval = setInterval(createRealTransaction, createRealTransactionIntervalMS); // Create every 2 seconds
+            } else {
+                // Set streaming OFF status
+                statusText.textContent = "Streaming is OFF";
+                statusText.classList.remove("text-success");
+                statusText.classList.add("text-secondary");
+                clearInterval(transactionStreamInterval);
+                transactionStreamInterval = null;
+            }
+        });
+
+
+    // Simulate creation of a real transaction
+        async function createRealTransaction() {
+            try {
+                const response = await fetch("{% url 'create-real-transaction' %}", {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": "{{ csrf_token }}",
+                    }
+                });
+                const data = await response.json();
+                if (data.status === "success") {
+                    prependTransactionToTable(data.transactions[0], allTransactionsTable);
+                } else {
+                    console.error(data.detail);
+                }
+            } catch (err) {
+                console.error("Error creating real transaction:", err);
+            }
+        }
+
+        // Create a fraudulent transaction
+    createFraudTransactionButton.addEventListener("click", async () => {
+        const fraudType = fraudTypeSelector.value;
+        try {
+            const response = await fetch("{% url 'create-fraudulent-transaction' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: new URLSearchParams({ fraud_type: fraudType }),
+            });
+            const data = await response.json();
+            if (data.status === "success") {
+                data.transactions.forEach(data_item => {
+                    prependTransactionToTable(data_item, allTransactionsTable);
+                });
+            } else {
+                console.error(data.detail);
+            }
+        } catch (err) {
+            console.error("Error creating fraudulent transaction:", err);
+        }
+    })
+
+    // Function to append a new transaction to the All Transactions table
+    function prependTransactionToTable(transaction, table) {
+        const row = document.createElement('tr'); // Create a new table row
+
+        // Populate the row with transaction data
+            // Create and add cells for each transaction property
+        const idCell = document.createElement("td");
+        idCell.textContent = transaction.transaction_id;
+
+        const accountCell = document.createElement("td")
+        accountCell.textContent = transaction.account_id;
+
+        const amountCell = document.createElement("td");
+        amountCell.textContent = `$${parseFloat(transaction.amount).toFixed(2)}`; // Ensure two decimal places
+
+        const ipCell = document.createElement("td");
+        ipCell.textContent = transaction.ip_address;
+
+        const receivedAtCell = document.createElement("td");
+        receivedAtCell.textContent = transaction.received_at;
+
+        // Append all cells to the row
+        row.appendChild(idCell);
+        row.appendChild(accountCell);
+        row.appendChild(amountCell);
+        row.appendChild(ipCell);
+        row.appendChild(receivedAtCell);
+        // Append the new row to the table
+        table.insertBefore(row, table.firstChild);
+
+        console.log(`Transaction added: ${JSON.stringify(transaction)}`);
+    }
+</script>
+</html>

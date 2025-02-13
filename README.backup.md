@@ -72,7 +72,9 @@ The Terraform Command Line Interface (CLI) is required to perform Terraform acti
 #### 4. Windows Jump Server Software Installation
 A Jump server on the internal network is required to connect to the Oracle DB that will be on a private internal network; the following software will allow you to connect to this jump server.
 
-Download this application called `Windows App` for your specific OS.
+The Installer for this application can be in the software folder of this directory and will be called [Windows_App_11.0.9_installer.pkg](./software/Windows_App_11.0.9_installer.pkg).
+
+Download this application with the installer and open the application called `Windows App`.
 
 
 ### 2. API Key Prerequisites
@@ -199,28 +201,9 @@ Run the following bash command from the directory containing the README.md file.
    windows_instance_username = "Administrator"
    ```
 
----
+#### Validate Infrastructure Provisioned
 
-## Validate Networking Infrastructure Provisioned
-In the next step we will validate that the networking between AWS & Confluent is working as expected
-
-### Validate AWS Private Endpoint ![aws_endpoint_services.png](img/aws_endpoint_services.png)
-1. Log into the AWS console
-2. Enter `endpoint services` into the `search` textbox
-3. Select the `endpoint services` feature button
-4. You will see an entry in the list view; under the `State` column it should say active
-5. You know the AWS Endpoint to view the Oracle DB state changes within the private network is correctly configured
-
-### Validate Confluent Private Egress ![confluent_networking.png](img/confluent_networking.png)
-1. Reopen the Windows Jump Server; this is the server setup in the [access the internal Windows machine section](#access-the-internal-windows-machine)
-2. Log into [Confluent Cloud](https://confluent.cloud/login)
-3. Select `Environments`
-4. Select the environment named after the `confluent_environment_name` output from Terraform
-5. In the horizontal menu select `Network Managment` 
-6. In the list view you will see 2 entries 
-   1. Each entries `Status` column will say `Ready`
-   2. One entries `Direction` column will say `Egress`, the others will say `Ingress`
-7. You know the Confluent Ingress/Egress to interact with AWS has been provisioned correctly
+#TODO show aws endpoint, show confluent egress/ingress status
 
 ---
 
@@ -510,9 +493,9 @@ We will now setup realtime Kafka Topic event processing via flink. These events 
 5. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will populate.
 ### Update the User Transaction table watermark to allow Timestamp based operations
 1. Click `+` Icon to the left of the Flink SQL Query Text Card to create a new query card
-2. In the new Flink SQL Query Text Card enter **Note:** the environment and cluster name will change based on the terraform output vars; the prefix will change as well based on what you determined it to be.
+2. In the new Flink SQL Query Text Card enter #TODO: update vars based on outputs **Note:** the environment and cluster name will change based on the terraform output vars; the prefix will change as well based on what you determined it to be.
    ```oracle
-   ALTER TABLE `terraform_output_confluent_environment_name`.`terraform_output_confluent_cluster_name`.`prefix.USER_TRANSACTION` 
+   ALTER TABLE `terraform-enviroment-name-output`.`terraform-cluster-name-output`.`prefix.USER_TRANSACTION` 
        MODIFY WATERMARK FOR `RECEIVED_AT` AS `RECEIVED_AT`;
    ```
 3. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will pop up
@@ -650,7 +633,7 @@ We will now stream the real time fraud kafka events being generated via the Flin
 3. Select `Fraud Dashboard` from the list view
 4. You can see dashboards describing fraud events determined via flink in real time
 
-### Generate Real & Fraudulent transactions and view them in the fraud dashboard![opensearch_dashboard.png](img/opensearch_dashboard.png)
+### Generate Real & Fraudulent transactions and view them in the fraud dashboard
 1. [Open the fraud UI](#connect-to-the-web-ui) **Note:** if the port forwarding is still running in the terminal it won't need to be port forwarded again.
 2. In the UI turn on the `Stream Real Transactions` toggle; after it is toggled every ~5 seconds a valid transaction will be created and its details will be visible in the `All Transactions` table
 3. Take note of the latest usernames from these transactions; they won't show up in the fraud dashboard

@@ -1,0 +1,34 @@
+{% load static %}
+{% load tz %}
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Django Project{% endblock %}</title>
+
+    <!-- Optional: Link to CSS files -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Header Section -->
+    <header>
+    </header>
+
+    <!-- Content Section -->
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer Section -->
+    <footer>
+        <p>&copy; {% now "Y" %} My Django Project. All rights reserved.</p>
+        {% block extra_footer %}{% endblock %}
+    </footer>
+
+    <!-- Optional: Link to JavaScript files -->
+    <script src="{% static 'js/script.js' %}"></script>
+</body>
+</html>
