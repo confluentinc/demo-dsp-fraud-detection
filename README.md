@@ -1,16 +1,20 @@
-# Fully Managed Oracle CDC V1 Connector via Private Link Demo
-This demo will cover key new Confluent features using a realistic application deployed on AWS.
+# Build a Fraud Detection Application with Private Oracle CDC Connector
+Fraud detection is crucial for protecting the financial assets of individuals and organizations in an increasingly digital world, leveraging analytical technologies to identify and prevent unethical activities and costly consequences. As digital transactions become more common, the complexity of fraud schemes also increases, requiring sophisticated detection methods. Modern methods like integrating advanced analytical and artificial intelligence algorithms help in identifying complex fraudulent patterns within vast datasets. 
+
+Private connectors are essential in this context, serving to connect an organization’s internal systems with external services and applications. They facilitate the secure flow of information from multiple sources, providing a comprehensive view for detecting fraud. Additionally, ensuring data transfers over secure channels help maintain data integrity and confidentiality, crucial for preventing data breaches and ensuring regulatory compliances. 
+
+This demo demonstrates how financial institutions can capture fraud transactions in real-time without leaving the public internet by leveraging stream processing and private connectors. This approach enables the seamless and secure synchronization of data across systems, ensuring real-time detection and response to potential fraudulent activities. Through stream processing with Flink, transactions are joined, filtered, aggregated and analyzed in real time, while private connectors ensure that data flows securely between systems, offering a robust solution for modern fraud detection. This use case will cover key new Confluent features using a realistic application deployed on AWS.
 
 ## Demo Diagram
 ![architecture_diagram.png](img/architecture_diagram.png)
-The Demo features real time fraud detection:
-- Backend/Frontend that could be setup for any real world use case
-- Oracle DB on a private internal network (almost every production DB is on a private network)
-- Oracle DB CDC Fully Managed Connector that streams events based on Database interactions
+The Demo features real-time fraud detection capabilities consisting of:
+- Backend/Frontend setup suitable for various real-world applications
+- Oracle DB on a private internal network for production use cases
+- Oracle DB CDC Fully Managed Connector that streams events triggered Database interactions
 - Confluent Kafka Cluster to store, stream & manage transaction & fraud events
-- Confluent Flink Compute Pool for real time fraud detection based on transaction events spawned from the Oracle DB 
-- OpenSearch Fully Managed Sink Connector to stream fraud events to a dashboard built for the fraud team
-- OpenSearch Instance to display dashboards for the fraud team to analyze and make future decisions with
+- Confluent Flink Compute Pool for real-time fraud detection based on transaction events deriving from the Oracle DB 
+- OpenSearch Fully Managed Sink Connector to stream fraud events to a dashboard for the fraud team
+- OpenSearch Instance to showcase dashboards for the fraud team's analysis and decision-making
 ---
 
 ## Prerequisites 
@@ -18,8 +22,8 @@ The Demo features real time fraud detection:
 ### Software Prerequisites
 
 #### 1. Install Homebrew
-Homebrew is a package manager for macOS, which is necessary to install Docker or other dependencies. Follow these steps to check and install Homebrew:
-1. Check if Homebrew is installed by running:
+Homebrew is a package manager for macOS, necessary for installing Docker or other dependencies. Follow these steps to verify and install Homebrew:
+1. Verify if Homebrew is installed by running:
    ```bash
    brew --version
    ```
@@ -101,7 +105,8 @@ In Confluent Cloud Create an API Key with  `Cloud resource management` Level Per
 ---
 
 ## Terraform Setup
-The following steps should be followed to setup Terraform which will automatically provision most of the critical infrastructure.
+Follow these steps to configure Terraform, which will auto-provision essential infrastructure components.
+
 **Note:** If the pre-requisites are not completed correctly the following will fail
 
 ### 1. Configure Terraform Variables
@@ -118,7 +123,7 @@ Example: `example_var_key_name="example_var_key_value"`
 
 ### 2. Initialize Terraform Providers
 
-This step ensures that you have access to the Cloud providers that Terraform will provision the infrastructure with
+This step verifies your access to the cloud providers used by Terraform for infrastructure provisioning.
 
 Run the following command from the same directory as the `README.md` file.
 
@@ -135,7 +140,9 @@ Run the following command from the same directory as the `README.md` file.
 
 #### Infrastructure Provisioned Overview
 
-The following steps provision, link, and coordinate the following resources on the following providers: **Note:** For more info on how resources interact please see the [Demo Diagram](#demo-diagram)
+The following steps will set up, connect, and synchronize the specified resources across the mentioned providers:
+
+**Note:** For more info on how resources interact please see the [Demo Diagram](#demo-diagram)
 
 AWS:
  - AWS Managed Oracle DB
@@ -154,7 +161,7 @@ Confluent:
  - Egress & Ingress Networking
 
 #### Provisioning the Infrastructure
-Run the following bash command from the directory containing the README.md file. This will start provision most of the demos required infrastructure.
+Run the following bash command from the directory containing the README.md file. This will start provisioning most of the demos required infrastructure.
 
 **Note:** This step is API intensive and may take 20-30 minutes.
 
@@ -202,7 +209,7 @@ Run the following bash command from the directory containing the README.md file.
 ---
 
 ## Validate Networking Infrastructure Provisioned
-In the next step we will validate that the networking between AWS & Confluent is working as expected
+In the next step we will validate that the networking between AWS & Confluent is working as expected.
 
 ### Validate AWS Private Endpoint ![aws_endpoint_services.png](img/aws_endpoint_services.png)
 1. Log into the AWS console
@@ -226,9 +233,9 @@ In the next step we will validate that the networking between AWS & Confluent is
 
 ## Database Setup
 
-In order for the fully managed Oracle CDC Connector V1 to work with the Oracle DB provisioned via Terraform in AWS certain Oracle DB settings must be configured.
+In order for the fully managed Oracle CDC Connector V1 to properly work with the Oracle DB provisioned via Terraform in AWS certain, Oracle DB settings must be configured.
 
-The Oracle DB is set up on a private network within AWS therefore it cannot be accessed and configured from your local machine and must be accessed from a machine within the private network.
+The Oracle DB is configured on a private network within AWS, making it inaccessible from your local machine, and only accessibile from a machine within the private network.
 
 This machine existing within the AWS private network has already been setup by Terraform and can be accessed using `Windows App` application that we downloaded in the [prerequisite software section](#4-windows-jump-server-software-installation).
 
@@ -449,7 +456,7 @@ Now that all the Infrastructure is provisioned and the database connector is pro
    ```
 
 ### Connect to the Web UI
-To connect to the Web UI and create transactions we will need to port forward the pod connection to our localhost
+To connect to the Web UI and create transactions, we will need to port forward the pod connection to our localhost.
 
 1. Port forward from Kubernetes Pod to LocalHost
    ```bash
@@ -474,7 +481,7 @@ To connect to the Web UI and create transactions we will need to port forward th
 
    
 ### Validate Topic Setup Success
-To validate the Connector topic streams were set up correctly the following steps can be taken.
+To validate the Connector topic streams were properly established, the following optional steps can be taken.
 
 1. Log into [Confluent Cloud](https://confluent.cloud/login)
 2. Select `Environments`
@@ -484,8 +491,8 @@ To validate the Connector topic streams were set up correctly the following step
 6. Examine the `Topic name` table column; the prefix.AUTH_USER & prefix.USER_TRANSACTION will exist. **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of [setting up the Oracle DB CDC connector](#setup-oracle-db-cdc-fully-managed-connector-v1).
 ---
 
-## Setup Flink Compute Queries
-We will now setup realtime Kafka Topic event processing via flink. These events are protected and only accessible in the private network; this mean we will need to access the events from the internal windows jump server.
+## Setup Flink Compute Queries for Real-Time Stream Processing
+We will proceed to establish real-time stream processing of Kafka Topic events using Flink. These events are protected and only available within the private network; therefore, we will need to access the events from the internal windows jump server.
 
 ### Navigate to Flink Via Internal Windows Machine
 1. Reopen the Windows Jump Server; this is the server setup in the [access the internal Windows machine section](#access-the-internal-windows-machine)
@@ -518,7 +525,7 @@ We will now setup realtime Kafka Topic event processing via flink. These events 
 3. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will pop up
 ![update_watermark_flink_query.png](img/update_watermark_flink_query.png)
    
-### Create Real Time Flink Processing to Identify Fraudulent Events
+### Create Real-Time Flink Processing to Identify Fraudulent Events
 1. Click `+` Icon to the left of the Flink SQL Query Text Card to create a new query card
 2. In the new Flink SQL Query Text Card enter 
 
@@ -580,7 +587,7 @@ We will now setup realtime Kafka Topic event processing via flink. These events 
 
 **Note:** This will create a kafka topic named `flagged_user` which can be seen from the Kafka Cluster view as well.
 
-### Generate more fraud events via UI to see Real Time detection
+### Generate more fraud events via UI to see real-time detection
 1. [Open the fraud UI](#connect-to-the-web-ui) **Note:** if the port forwarding is still running in the terminal it won't need to be port forwarded again.
 2. In the Web UI `Simulate Fraud` dropdown select the `Burst Count Transaction` option and click the `Commit Fraud` button 4 times. 
 3. Navigate back to the `flagged_user` Flink SQL Query Card output setup in the [Test newly created fraud detection section](#test-the-newly-created-fraud-detection-table) & you will see fraud events generated (these can be validated via the `username` field)
@@ -588,7 +595,7 @@ We will now setup realtime Kafka Topic event processing via flink. These events 
 ---
 
 ## Setup OpenSearch Sink Connector
-We will now stream the real time fraud kafka events being generated via the Flink query to a dashbaord for the fraud team to analyze
+We will now stream the real-time fraud Kafka events generated through the Flink query to a dashboard for the fraud team's analysis.
 
 ### Navigate to the Confluent Cluster Connector View
 1. Log into [Confluent Cloud](https://confluent.cloud/login)
@@ -648,7 +655,7 @@ We will now stream the real time fraud kafka events being generated via the Flin
 1. Select the side menu from the 3 horizontal lines icon in the top right
 2. Select `OpenSearch Dashboard` > `Dashboards`
 3. Select `Fraud Dashboard` from the list view
-4. You can see dashboards describing fraud events determined via flink in real time
+4. You can see dashboards describing fraud events determined via flink in real-time
 
 ### Generate Real & Fraudulent transactions and view them in the fraud dashboard![opensearch_dashboard.png](img/opensearch_dashboard.png)
 1. [Open the fraud UI](#connect-to-the-web-ui) **Note:** if the port forwarding is still running in the terminal it won't need to be port forwarded again.
@@ -660,6 +667,8 @@ We will now stream the real time fraud kafka events being generated via the Flin
 
 
 ## Conclusion
-Congratulations! You have successfully implemented real time fraud detection using an Oracle DB on a private network, Confluents Private Link,  Fully managed connectors, fully managed Kafka streams, and Opensearch dashboards.
+Congratulations! You have successfully deployed real-time fraud detection employing an Oracle DB on a private network, utilizing Confluent's Private Link, fully managed connectors, fully managed Kafka streams, and Opensearch dashboards.
 
-This demo can be updated to work for your specific use case long term.
+This use case demonstrates the advanced and proactive approach financial institutions can adopt to combat fraud effectively. By integrating stream processing with private connectors, they can drive real-time monitoring and detection capabilities, ensuring secure and seamless transaction processing. 
+
+Feel free to leverage and update this demo to work for your specific use case long term.
