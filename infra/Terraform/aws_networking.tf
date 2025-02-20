@@ -133,6 +133,7 @@ resource "aws_security_group" "sg" {
     security_groups = [aws_security_group.windows_sg.id]
   }
 
+
   ingress {
     from_port = 9092
     to_port = 9092
@@ -259,13 +260,4 @@ resource "aws_route53_record" "privatelink" {
   records = [
     aws_vpc_endpoint.privatelink.dns_entry[0]["dns_name"]
   ]
-}
-
-
-output "aws_caller_identity" {
-  value = {
-    account_id = data.aws_caller_identity.current.account_id
-    arn        = data.aws_caller_identity.current.arn
-    user_id    = data.aws_caller_identity.current.user_id
-  }
 }

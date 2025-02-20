@@ -83,11 +83,6 @@ resource "aws_iam_role" "eks_cluster_role" {
   }
 }
 
-resource "aws_iam_role_policy_attachment" "eks_cluster_role_policy" {
-  role       = aws_iam_role.eks_cluster_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-}
-
 resource "aws_iam_role" "eks_node_role" {
   name = "${var.prefix}-eks-node-role-${random_id.env_display_id.hex}"
   assume_role_policy = jsonencode({
@@ -105,6 +100,38 @@ resource "aws_iam_role" "eks_node_role" {
   }
   depends_on = [aws_iam_role_policy_attachment.eks_cluster_role_policy]
 }
+# 3. Amazon EKS Pod Identity
+resource "aws_iam_role" "eks_pod_identity" {
+  name = "eks-pod-identity-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+      }
+    ]
+  })
+}
+
+
+
+
+########## POLICY ATTACHMENTS ###########################
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_role_policy" {
+  role       = aws_iam_role.eks_cluster_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+
 
 resource "aws_iam_role_policy_attachment" "eks_node_role_policy" {
   role       = aws_iam_role.eks_node_role.name
@@ -120,6 +147,27 @@ resource "aws_iam_role_policy_attachment" "AmazonEC2ContainerRegistryReadOnly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.eks_node_role.name
 }
+
+# Example policy attachment (customize as needed)
+resource "aws_iam_role_policy_attachment" "s3_read_only" {
+  role       = aws_iam_role.eks_pod_identity.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_read_only" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_pod_identity.name
+}
+
+
+
+resource "aws_eks_pod_identity_association" "example" {
+  cluster_name    = aws_eks_cluster.eks_cluster.name
+  namespace       = "default"
+  service_account = "my-service-account"
+  role_arn        = aws_iam_role.eks_pod_identity.arn
+}
+
 ################################################################
 # EKS INFRA
 ################################################################
@@ -219,43 +267,6 @@ resource "aws_eks_addon" "vpc_cni" {
 }
 
 
-# 3. Amazon EKS Pod Identity
-resource "aws_iam_role" "eks_pod_identity" {
-  name = "eks-pod-identity-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "pods.eks.amazonaws.com"
-        }
-        Action = [
-          "sts:AssumeRole",
-          "sts:TagSession"
-        ]
-      }
-    ]
-  })
-}
-
-# Example policy attachment (customize as needed)
-resource "aws_iam_role_policy_attachment" "s3_read_only" {
-  role       = aws_iam_role.eks_pod_identity.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "ec2_read_only" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.eks_pod_identity.name
-}
-resource "aws_eks_pod_identity_association" "example" {
-  cluster_name    = aws_eks_cluster.eks_cluster.name
-  namespace       = "default"
-  service_account = "my-service-account"
-  role_arn        = aws_iam_role.eks_pod_identity.arn
-}
 
 # resource "aws_eks_pod_identity_association" "admin_association" {
 #   cluster_name    = aws_eks_cluster.eks_cluster.name
