@@ -94,6 +94,7 @@ output "oracle_db_details" {
 output "oracle_connector" {
   value = {
     table_inclusion_regex = "${aws_db_instance.oracle_db.db_name}[.]${upper(aws_db_instance.oracle_db.username)}[.](USER_TRANSACTION|AUTH_USER)"
+    table_topic_name = "fd$${tableName}"
   }
 }
 
