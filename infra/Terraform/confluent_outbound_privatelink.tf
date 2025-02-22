@@ -36,7 +36,3 @@ resource "confluent_access_point" "confluent_oracle_db_access_point" {
   depends_on = [aws_vpc_endpoint_service_allowed_principal.allow_confluent_rds_gateway]
 }
 
-
-
-
-

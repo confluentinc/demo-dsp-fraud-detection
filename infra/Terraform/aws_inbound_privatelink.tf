@@ -3,6 +3,10 @@
 resource "aws_vpc_endpoint_service" "rds_endpoint_service" {
   acceptance_required        = false
   network_load_balancer_arns = [aws_lb.rds_oracle_nlb.arn]
+
+  tags = {
+    Name = "${var.prefix}-rds-endpoint-services-${random_id.env_display_id.hex}"
+  }
 }
 
 resource "null_resource" "reject_connections" {
@@ -12,9 +16,14 @@ resource "null_resource" "reject_connections" {
 
   provisioner "local-exec" {
     command = <<EOT
-      aws ec2 describe-vpc-endpoint-connections --service-id ${aws_vpc_endpoint_service.rds_endpoint_service.id} \
-      --query 'VpcEndpointConnections[*].VpcEndpointId' --output text | \
-      xargs -I {} aws ec2 reject-vpc-endpoint-connections --service-id ${aws_vpc_endpoint_service.rds_endpoint_service.id} --vpc-endpoint-ids {}
+      VPC_ENDPOINTS=$(aws ec2 describe-vpc-endpoint-connections --service-id ${aws_vpc_endpoint_service.rds_endpoint_service.id} \
+      --query 'VpcEndpointConnections[*].VpcEndpointId' --output text)
+
+      if [ ! -z "$VPC_ENDPOINTS" ]; then
+        aws ec2 reject-vpc-endpoint-connections --service-id ${aws_vpc_endpoint_service.rds_endpoint_service.id} --vpc-endpoint-ids $VPC_ENDPOINTS
+      else
+        echo "No VPC Endpoints to reject"
+      fi
     EOT
   }
 
@@ -22,7 +31,6 @@ resource "null_resource" "reject_connections" {
     create_before_destroy = true
   }
 }
-
 
 # Add service permission policy
 resource "aws_vpc_endpoint_service_allowed_principal" "allow_confluent_rds_gateway" {
@@ -53,6 +61,9 @@ resource "aws_lb_listener" "rds_lb_listener" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.rds_oracle_target_group.arn
   }
+  tags = {
+    Name = "${var.prefix}-rds-oracle-lb-listener-${random_id.env_display_id.hex}"
+  }
 }
 
 # NLB Target Group
@@ -69,6 +80,10 @@ resource "aws_lb_target_group" "rds_oracle_target_group" {
     healthy_threshold   = 3
     unhealthy_threshold = 3
     interval            = 30
+  }
+
+  tags = {
+    Name = "${var.prefix}-rds-oracle-target-group-${random_id.env_display_id.hex}"
   }
 }
 

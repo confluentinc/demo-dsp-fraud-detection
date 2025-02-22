@@ -28,6 +28,9 @@ resource "aws_route53_zone" "privatelink" {
   vpc {
     vpc_id = aws_vpc.main.id
   }
+  tags = {
+    Name = "${var.prefix}-privatelink-route-53-zone-${random_id.env_display_id.hex}"
+  }
 }
 
 

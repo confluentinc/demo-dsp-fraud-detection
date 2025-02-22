@@ -9,7 +9,6 @@ resource "aws_vpc" "main" {
     enable_dns_hostnames = true
     tags = {
         Name = "${var.prefix}-vpc-${random_id.env_display_id.hex}"
-        # "kubernetes.io/cluster/${aws_eks_cluster.eks_cluster.name}" = "shared"
     }
 
 }
@@ -29,10 +28,10 @@ resource "aws_subnet" "public_subnets" {
     }
 }
 
+# resource to tag public subnets with eks_cluster name while avoiding circular dependencies
 resource "aws_ec2_tag" "public_subnet_eks_tag" {
-
-  for_each    = toset([for pub_subnet in aws_subnet.public_subnets : pub_subnet.id])
-  resource_id = each.value
+  count       = length(aws_subnet.public_subnets)
+  resource_id = aws_subnet.public_subnets[count.index].id
   key         = "kubernetes.io/cluster/${aws_eks_cluster.eks_cluster.name}"
   value       = "shared"
 }
@@ -68,6 +67,9 @@ resource "aws_internet_gateway" "igw" {
 # ------------------------------------------------------
 
 resource "aws_eip" "eip" {
+  tags = {
+        Name = "${var.prefix}-aws-eip-${random_id.env_display_id.hex}"
+  }
 }
 
 # ------------------------------------------------------
@@ -162,6 +164,8 @@ resource "aws_security_group" "sg" {
 
   tags = {
     Name = "allow_tls"
+    Name = "${var.prefix}-security-group-${random_id.env_display_id.hex}"
+
   }
 }
 

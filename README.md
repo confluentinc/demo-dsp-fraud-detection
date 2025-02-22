@@ -1,18 +1,20 @@
-# Build a Fraud Detection Application with Private Oracle CDC Connector
-Fraud detection is crucial for protecting the financial assets of individuals and organizations in an increasingly digital world, leveraging analytical technologies to identify and prevent unethical activities and costly consequences. As digital transactions become more common, the complexity of fraud schemes also increases, requiring sophisticated detection methods. Modern methods like integrating advanced analytical and artificial intelligence algorithms help in identifying complex fraudulent patterns within vast datasets. 
+# Real Time Fraud Detection With Confluent Cloud
+This demo will enable you to provision and test **real time** fraud detection using Private DB Connectors, Kafka event streams & real time Flink processing all easily orchestrated on Confluent Cloud. 
 
-Private connectors are essential in this context, serving to connect an organization’s internal systems with external services and applications. They facilitate the secure flow of information from multiple sources, providing a comprehensive view for detecting fraud. Additionally, ensuring data transfers over secure channels help maintain data integrity and confidentiality, crucial for preventing data breaches and ensuring regulatory compliances. 
+Fraud detection is a common use case for Confluent Cloud customers because fraud must be caught in real time to prevent theft.  
 
-This demo demonstrates how financial institutions can capture fraud transactions in real-time without leaving the public internet by leveraging stream processing and private connectors. This approach enables the seamless and secure synchronization of data across systems, ensuring real-time detection and response to potential fraudulent activities. Through stream processing with Flink, transactions are joined, filtered, aggregated and analyzed in real time, while private connectors ensure that data flows securely between systems, offering a robust solution for modern fraud detection. This use case will cover key new Confluent features using a realistic application deployed on AWS.
+This demo demonstrates how financial institutions can capture fraudulent transactions in real-time from databases that are on secure internal private networks by leveraging stream processing and private connectors.
 
 ## Demo Diagram
 ![architecture_diagram.png](img/architecture_diagram.png)
-The Demo features real-time fraud detection capabilities consisting of:
-- Backend/Frontend setup suitable for various real-world applications
-- Oracle DB on a private internal network for production use cases
-- Oracle DB CDC Fully Managed Connector that streams events triggered Database interactions
-- Confluent Kafka Cluster to store, stream & manage transaction & fraud events
-- Confluent Flink Compute Pool for real-time fraud detection based on transaction events deriving from the Oracle DB 
+The Demo was built to reflect a typical software production environment. It contains many common components such as:
+- An EKS Kubernetes cluster hosts an app that can be accessed via the web
+- An Oracle DB on a private internal network; No production database is publicly accessible
+
+Real-Time fraud detection is achieved by adding a few more components
+- A Kafka Cluster to store, stream & manage transaction & fraud events
+- An Oracle DB Connector that streams database entries as Kafka events privately to a Kafka cluster hosted on Confluent Cloud
+- A Flink Compute Pool for real-time fraud analysis based on transaction events deriving from the Oracle DB 
 - OpenSearch Fully Managed Sink Connector to stream fraud events to a dashboard for the fraud team
 - OpenSearch Instance to showcase dashboards for the fraud team's analysis and decision-making
 ---
@@ -23,8 +25,7 @@ The Demo features real-time fraud detection capabilities consisting of:
 3. [Validate Networking Infrastructure](#validate-networking-infrastructure)
 4. [Oracle DB Configuration](#oracle-db-configuration)
 5. [Setup Oracle DB CDC Fully Managed Connector V1](#setup-oracle-db-cdc-fully-managed-connector-v1)
-6. [Update Kubernetes Cluster Access](#update-kubernetes-cluster-access)
-7. [Setup Web Application & Simulate Transactions](#setup-web-application--simulate-transactions)
+7. [Create Real & Fraudulent Transactions with the Web UI](#create-real--fraudulent-transactions-with-the-web-ui)
 8. [Setup Flink Compute Queries for Real-Time Stream Processing](#setup-flink-compute-queries-for-real-time-stream-processing)
 9. [Setup OpenSearch Sink Connector](#setup-opensearch-sink-connector)
 10. [Setup Opensearch Dashboard](#setup-opensearch-dashboard)
@@ -72,8 +73,6 @@ In this section we will install and validate all required software for the demo 
    brew install hashicorp/tap/terraform
    brew install confluentinc/tap/cli
    brew install kubectl
-   brew install jq
-   brew install helm
    ```
 
 
@@ -84,8 +83,6 @@ In this section we will install and validate all required software for the demo 
    terraform -version
    confluent version
    kubectl version --client
-   jq --version
-   helm version
    ```
    
    **Expected Output**:
@@ -449,123 +446,17 @@ The following steps will result in database change events on the `DEMODB` databa
 
 ---
 
-## Validate & Interact with Kubernetes Cluster
-We need to allow our local computer to access the Kubernetes cluster via the AWS terminal to setup our port forwarding.
-
-<details>
-<summary>Validate Kubernetes Cluster Setup Terraform</summary>
-
-1. Ensure that only one Kubernetes Cluster is being created
-   ```bash
-   export AWS_REGION="us-west-2" # set the correct AWS Region 
-   aws eks list-clusters --region ${AWS_REGION} #
-   ```
-   **Expected Output:**
-   
-   Example of a successful output:
-   ```text
-   {
-       "clusters": [
-           "frauddetectiondemo-eks-cluster-<cluster-string-name>",
-      ]
-   }
-   ```
-   
-   **Note:** You will need to press `ctrl c` after this is ran
-
-
-2. Store the kubernetes cluster name so you can interact with it.
-   ```bash
-   export AWS_CLUSTER_NAME=$(aws eks list-clusters --region ${AWS_REGION} --output json | jq -r '.clusters[0]')
-   echo $AWS_CLUSTER_NAME
-   ```
-   
-   **Expected Output:**
-   
-   ```text
-   frauddetectiondemo-eks-cluster-<cluster-string-name>
-   ```
-   
-3. Update your local Kube config to enable `kubectl` command line client 
-   ```bash
-   aws eks --region ${AWS_REGION} update-kubeconfig --name ${AWS_CLUSTER_NAME}
-   ```
-
-   **Expected Output:**
-
-   ```text
-   Added new context arn:aws:eks:<region-name>:<account-id>:cluster/<cluster-name> to kubeconfig
-   ```
-
-4. Validate you can access the Pod
-   ```bash
-   kubectl get nodes
-   ```
-   
-   **Expected Output:**
-   ```text
-   NAME STATUS ROLES AGE VERSION ip-192-168-1-1.ec2.internal Ready  15m v1.25.6 ip-192-168-2-1.ec2.internal Ready  15m v1.25.6
-   ```
-5. Set working namespace to default
-   ```bash
-   kubectl config set-context --current --namespace=default
-   ```
-   **Expected Output:**
-   ```text
-   Context "<current-context>" modified.
-   ```
-6. Validate namespace is set to default
-   ```bash
-   kubectl config view --minify | grep namespace:
-   ```
-   
-   **Expected Output:**
-   ```text
-   namespace: default
-   ```
-7. Validate the web application is running
-   ```bash
-   export POD_LOGS=$(kubectl get pods --sort-by=.metadata.creationTimestamp \
-     -o jsonpath='{.items[?(@.metadata.name contains "fraud-demo")].metadata.name}' | awk 'NR==1')
-   echo $POD_LOGS
-   kubectl get pods
-   kubectl logs ${POD_LOGS}
-   ```
-   
-   **Expected Output**
-   ```text
-   10.0.11.94 - - [03/Feb/2025:19:03:03 +0000] "GET /health/ HTTP/1.1" 200 16 "-" "kube-probe/1.31+"
-   ```
-
-</details>
-
----
-
-## Setup Web Application & Simulate Transactions
+## Create Real & Fraudulent Transactions with the Web UI
 Now that all the Infrastructure is provisioned and the database connector is provisioned and setup we can start creating real database transactions.
-
 
 <details>
 <summary>Connect to the Web UI</summary>
 
-To connect to the Web UI and create transactions, we will need to port forward the pod connection to our localhost.
-
-1. Port forward from Kubernetes Pod to LocalHost
-   ```bash
-   export POD_PORT_FORWARD=$(kubectl get pods --sort-by=.metadata.creationTimestamp \
-    -o jsonpath='{.items[?(@.metadata.name contains "fraud-demo")].metadata.name}' | awk 'NR==1')
-   echo $POD_PORT_FORWARD
-   kubectl port-forward pod/${POD_PORT_FORWARD} 8000:8000
-   ```
-
-   **Expected Outputs:**
-   ```text
-   Forwarding from [::1]:8000 -> 8000
-   ```
-2. Open the Web UI by opening your webbrowser to [http://localhost:8000/fraud-demo/](http://localhost:8000/fraud-demo/)![transaction_ui.png](img/transaction_ui.png)
-3. In the UI turn on the `Stream Real Transactions` toggle; after it is toggled every ~5 seconds a valid transaction will be created and its details will be visible in the `All Transactions` table
-4. Allow 5-6 valid transactions to be created
-5. In the Web UI `Simulate Fraud` dropdown select each option and click the `Commit Fraud` button 4 times. Each option to select
+[transaction_ui.png](img/transaction_ui.png)
+1. Open the Web UI by opening your web browser to the URL found in the terraform output demo_details -> fraud_ui
+2. In the UI turn on the `Stream Real Transactions` toggle; after it is toggled every ~5 seconds a valid transaction will be created and its details will be visible in the `All Transactions` table
+3. Allow 5-6 valid transactions to be created
+4. In the Web UI `Simulate Fraud` dropdown select each option and click the `Commit Fraud` button 4 times. Each option to select
    - `Burst Count Transaction`
    - `Burst Amount Transaction`
    - `Large Amount Transaction`
@@ -574,7 +465,7 @@ To connect to the Web UI and create transactions, we will need to port forward t
 </details>
 
 <details>
-<summary>Validate Transaction Streamed to Topic via Connector </summary>
+<summary>Validate Transactions are Streamed to Topic via Connector </summary>
 
 1. Log into [Confluent Cloud](https://confluent.cloud/login)
 2. Select `Environments`
@@ -701,7 +592,7 @@ We will proceed to establish real-time stream processing of Kafka Topic events u
 <details>
 <summary>Test Real Time Fraud Detection</summary>
 
-1. [Open the fraud UI](#connect-to-the-web-ui) **Note:** if the port forwarding is still running in the terminal it won't need to be port forwarded again.
+1. [Open the fraud UI](#connect-to-the-web-ui) 
 2. In the Web UI `Simulate Fraud` dropdown select the `Burst Count Transaction` option and click the `Commit Fraud` button 4 times. 
 3. Navigate back to the `flagged_user` Flink SQL Query Card output setup in the [Test newly created fraud detection section](#test-the-newly-created-fraud-detection-table) & you will see fraud events generated (these can be validated via the `username` field)
 </details>

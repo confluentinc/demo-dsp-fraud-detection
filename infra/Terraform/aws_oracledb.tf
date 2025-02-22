@@ -7,7 +7,7 @@ resource "aws_db_subnet_group" "db_subnet_group" {
   description = "Subnet group for the Oracle DB instance"
   subnet_ids  = [for priv_subnet in aws_subnet.private_subnets : priv_subnet.id] # Use private subnets only
   tags = {
-    Name = "${var.prefix}-oracle-db-subnet-group"
+    Name = "${var.prefix}-oracle-db-subnet-group-${random_id.env_display_id.hex}"
   }
 }
 
@@ -50,7 +50,7 @@ resource "aws_db_instance" "oracle_db" {
   # tags
   tags = {
     Environment = "dev"
-    Name        = var.oracle_db_name
+    Name = "${var.prefix}-oracle-db-${random_id.env_display_id.hex}"
   }
 
 }
@@ -74,6 +74,10 @@ resource "aws_security_group" "db_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name = "${var.prefix}-db-sg-${random_id.env_display_id.hex}"
+  }
 }
 
 output "oracle_db_details" {
@@ -87,7 +91,9 @@ output "oracle_db_details" {
   }
 }
 
-output "oracle_connector_table_inclusion_regex" {
-  value = "${aws_db_instance.oracle_db.db_name}[.]${upper(aws_db_instance.oracle_db.username)}[.](USER_TRANSACTION|AUTH_USER)"
+output "oracle_connector" {
+  value = {
+    table_inclusion_regex = "${aws_db_instance.oracle_db.db_name}[.]${upper(aws_db_instance.oracle_db.username)}[.](USER_TRANSACTION|AUTH_USER)"
+  }
 }
 

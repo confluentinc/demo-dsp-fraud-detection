@@ -39,7 +39,7 @@ variable "aws_secret" {
 variable "availability_zones" {
   description = "List of availability zones to use for the private subnets"
   type        = list(string)
-  default = ["us-west-2a", "us-west-2b", "us-west-2c"]
+  default     = ["us-west-2a", "us-west-2b", "us-west-2c"]
 }
 
 variable "vpc_cidr" {
@@ -78,24 +78,30 @@ variable "oracle_db_port" {
 variable "opensearch_master_username" {
   description = "OpenSearch Username"
   type        = string
-  default = "admin"
+  default     = "admin"
 }
 
 variable "opensearch_master_password" {
   description = "OpenSearch Password"
   type        = string
-  default = "Admin123456!"
+  default     = "Admin123456!"
 }
 
 ############# Kubernetes Variables
 variable "webapp_name" {
   description = "Webapp Name"
   type        = string
-  default = "fraud-demo"
+  default     = "fraud-demo"
 }
 
 variable "webapp_namespace" {
   description = "Kubernetes Namespace to deploy application inside"
   type        = string
-  default = "default"
+  default     = "frauddemo"
+}
+
+variable "windows_jump_server_password" {
+  description = "Windows Jump server Admin Password"
+  type        = string
+  default     = "thatsAGoodPass"
 }

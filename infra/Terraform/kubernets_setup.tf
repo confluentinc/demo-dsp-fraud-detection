@@ -2,15 +2,29 @@ resource "null_resource" "kube_config" {
   provisioner "local-exec" {
     command = <<EOT
 aws eks --region ${var.region} update-kubeconfig --name ${aws_eks_cluster.eks_cluster.name}
-kubectl config set-context --current --namespace=${var.webapp_namespace}
 EOT
   }
+}
+
+resource "null_resource" "kube_context" {
+  provisioner "local-exec" {
+    command = <<EOT
+kubectl config set-context --current --namespace=${kubernetes_namespace.demo_namespace.metadata[0].name}
+EOT
+  }
+}
+
+resource "kubernetes_namespace" "demo_namespace" {
+  metadata {
+    name = var.webapp_namespace
+  }
+  depends_on = [aws_eks_cluster.eks_cluster, aws_eks_access_policy_association.caller_cluster_admin_policy]
 }
 
 resource "kubernetes_config_map" "fraud_demo_config" {
   metadata {
     name = "${var.webapp_name}-config" # Replace with your ConfigMap name
-    namespace = "${var.webapp_namespace}"     # Change to desired namespace
+    namespace = kubernetes_namespace.demo_namespace.metadata[0].name    # Change to desired namespace
   }
 
   data = {
@@ -29,7 +43,7 @@ resource "kubernetes_config_map" "fraud_demo_config" {
 resource "kubernetes_deployment" "fraud_demo" {
   metadata {
     name = "${var.webapp_name}"
-    namespace = "${var.webapp_namespace}"
+    namespace = kubernetes_namespace.demo_namespace.metadata[0].name
   }
 
   spec {
@@ -188,7 +202,7 @@ resource "kubernetes_deployment" "fraud_demo" {
 resource "kubernetes_service" "fraud_demo_service" {
   metadata {
     name = "service-${var.webapp_name}"
-    namespace = "${var.webapp_namespace}"
+    namespace = kubernetes_namespace.demo_namespace.metadata[0].name
   }
 
   spec {
@@ -216,14 +230,14 @@ resource "kubernetes_ingress_class" "fraud_demo_load_balancer_controller" {
   spec {
     controller = "eks.amazonaws.com/alb"
   }
+  depends_on = [aws_eks_access_policy_association.caller_cluster_admin_policy]
 }
-
 
 resource "kubernetes_ingress_v1" "fraud_demo_load_balancer" {
   wait_for_load_balancer = true
   metadata {
     name = "ingress-${var.webapp_name}"
-    namespace = "${var.webapp_namespace}"
+    namespace = kubernetes_namespace.demo_namespace.metadata[0].name
     annotations = {
       "alb.ingress.kubernetes.io/scheme" = "internet-facing"
       "alb.ingress.kubernetes.io/target-type" = "ip"
@@ -247,12 +261,12 @@ resource "kubernetes_ingress_v1" "fraud_demo_load_balancer" {
       }
     }
   }
-
+  depends_on = [aws_eks_access_policy_association.caller_cluster_admin_policy]
 }
 
 # Display load balancer hostname (typically present in AWS)
 output "demo_details" {
   value = {
-    fraud_ui = kubernetes_ingress_v1.fraud_demo_load_balancer.status.0.load_balancer.0.ingress.0.hostname
+    fraud_ui = "http://${kubernetes_ingress_v1.fraud_demo_load_balancer.status.0.load_balancer.0.ingress.0.hostname}/fraud-demo/"
   }
 }

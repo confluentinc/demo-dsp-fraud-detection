@@ -129,7 +129,7 @@ resource "aws_eks_cluster" "eks_cluster" {
 
 
   tags = {
-    Name = "${var.prefix}-eks-cluster"
+    Name = "${var.prefix}-eks-cluster-${random_id.env_display_id.hex}"
   }
 
   # Ensure that IAM Role permissions are created before and deleted
