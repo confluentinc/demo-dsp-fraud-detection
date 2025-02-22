@@ -9,7 +9,9 @@ resource "aws_vpc" "main" {
     enable_dns_hostnames = true
     tags = {
         Name = "${var.prefix}-vpc-${random_id.env_display_id.hex}"
+        # "kubernetes.io/cluster/${aws_eks_cluster.eks_cluster.name}" = "shared"
     }
+
 }
 
 # ------------------------------------------------------
@@ -23,8 +25,18 @@ resource "aws_subnet" "public_subnets" {
     map_public_ip_on_launch = true
     tags = {
         Name = "${var.prefix}-public-${count.index}-${random_id.env_display_id.hex}"
+        "kubernetes.io/role/elb" = "1"  # Required for public LoadBalancer
     }
 }
+
+resource "aws_ec2_tag" "public_subnet_eks_tag" {
+
+  for_each    = toset([for pub_subnet in aws_subnet.public_subnets : pub_subnet.id])
+  resource_id = each.value
+  key         = "kubernetes.io/cluster/${aws_eks_cluster.eks_cluster.name}"
+  value       = "shared"
+}
+
 
 # ------------------------------------------------------
 # Private SUBNETS
@@ -153,111 +165,8 @@ resource "aws_security_group" "sg" {
   }
 }
 
-# Security Group for Windows EC2 Instance
-
-# ------------------------------------------------------
-# IAM Roles
-# ------------------------------------------------------
-#
-# resource "aws_iam_role_policy" "eni_policy" {
-#   name = "${var.prefix}-eni-policy-${random_id.vpc_display_id.hex}"
-#   role = "aws_iam_role.${var.prefix}_role.id"
-#
-#   policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect = "Allow"
-#         Action = [
-#           "ec2:AttachNetworkInterface",
-#           "ec2:CreateNetworkInterface",
-#           "ec2:CreateNetworkInterfacePermission",
-#           "ec2:DeleteNetworkInterface",
-#           "ec2:DeleteNetworkInterfacePermission",
-#           "ec2:DetachNetworkInterface",
-#           "ec2:DescribeNetworkInterfaces"
-#         ]
-#         Resource = [
-#           "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:network-interface/*",
-#           "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:subnet/*",
-#           "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:security-group/*"
-#         ]
-#       },
-#       {
-#         Effect = "Allow"
-#         Action = [
-#           "ec2:DescribeDhcpOptions",
-#           "ec2:DescribeRouteTables",
-#           "ec2:DescribeSecurityGroups",
-#           "ec2:DescribeSubnets",
-#           "ec2:DescribeVpcs",
-#           "ec2:Describe*"
-#         ]
-#         Resource = "*"
-#       },
-#       {
-#         Effect = "Allow"
-#         Action = [
-#           "ec2:CreateTags"
-#         ]
-#         Resource = "arn:aws:ec2:*:*:network-interface/*"
-#         Condition = {
-#           StringEquals = {
-#             "aws:RequestTag/OSISManaged" = "true"
-#           }
-#         }
-#       }
-#     ]
-#   })
-# }
-
-
-
-# ------------------------------------------------------
-# VPC Endpoint
-# ------------------------------------------------------
-
-
-resource "aws_vpc_endpoint" "privatelink" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = confluent_private_link_attachment.pla.aws[0].vpc_endpoint_service_name
-  vpc_endpoint_type = "Interface"
-
-  security_group_ids = [
-    aws_security_group.sg.id,
-  ]
-
-  subnet_ids = [for subnet in aws_subnet.private_subnets : subnet.id]
-
-  private_dns_enabled = false
-
-  tags = {
-    Name = "${var.prefix}-confluent-private-link-endpoint-${random_id.env_display_id.hex}"
+output "aws_caller_info" {
+  value = {
+    caller_arn = data.aws_caller_identity.current.arn
   }
-}
-
-
-
-# # ------------------------------------------------------
-# VPC Endpoint
-# ------------------------------------------------------
-
-
-resource "aws_route53_zone" "privatelink" {
-  name = confluent_private_link_attachment.pla.dns_domain
-
-  vpc {
-    vpc_id = aws_vpc.main.id
-  }
-}
-
-
-resource "aws_route53_record" "privatelink" {
-  zone_id = aws_route53_zone.privatelink.zone_id
-  name = "*.${aws_route53_zone.privatelink.name}"
-  type = "CNAME"
-  ttl  = "60"
-  records = [
-    aws_vpc_endpoint.privatelink.dns_entry[0]["dns_name"]
-  ]
 }

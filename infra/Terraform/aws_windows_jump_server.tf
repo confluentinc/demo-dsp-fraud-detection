@@ -99,19 +99,11 @@ resource "aws_security_group" "windows_sg" {
   }
 }
 
-output "windows_instance_password" {
-  value = rsadecrypt(aws_instance.windows_instance.password_data, file("${path.module}/MyKeyPair.pem"))
-
+output "windows_jump_server_details" {
+  value = {
+    ip       = aws_instance.windows_instance.public_ip
+    username = "Administrator"
+    password = rsadecrypt(aws_instance.windows_instance.password_data, file("${path.module}/MyKeyPair.pem"))
+  }
 }
 
-output "windows_instance_ip" {
-  value = aws_instance.windows_instance.public_ip
-}
-
-output "windows_instance_username" {
-  value = "Administrator"
-}
-
-# output "windows_instance_rdp_url" {
-#   value = "rdp://${aws_instance.windows_instance.public_ip}:3389"
-# }

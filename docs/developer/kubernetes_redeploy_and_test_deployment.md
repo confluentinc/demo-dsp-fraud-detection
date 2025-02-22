@@ -6,6 +6,11 @@ kubectl delete event --all -n defualt
 kubectl delete deployment --all -n default
 ```
 
+- Delete all services
+```bash
+kubectl delete service --all -n default 
+```
+
 - Deploy deployment
 ```bash
 kubectl apply -f ../../resources/frauddemo.deployment.yaml

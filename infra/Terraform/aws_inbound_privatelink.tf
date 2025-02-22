@@ -5,6 +5,24 @@ resource "aws_vpc_endpoint_service" "rds_endpoint_service" {
   network_load_balancer_arns = [aws_lb.rds_oracle_nlb.arn]
 }
 
+resource "null_resource" "reject_connections" {
+  triggers = {
+    service_id = aws_vpc_endpoint_service.rds_endpoint_service.id
+  }
+
+  provisioner "local-exec" {
+    command = <<EOT
+      aws ec2 describe-vpc-endpoint-connections --service-id ${aws_vpc_endpoint_service.rds_endpoint_service.id} \
+      --query 'VpcEndpointConnections[*].VpcEndpointId' --output text | \
+      xargs -I {} aws ec2 reject-vpc-endpoint-connections --service-id ${aws_vpc_endpoint_service.rds_endpoint_service.id} --vpc-endpoint-ids {}
+    EOT
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 
 # Add service permission policy
 resource "aws_vpc_endpoint_service_allowed_principal" "allow_confluent_rds_gateway" {
