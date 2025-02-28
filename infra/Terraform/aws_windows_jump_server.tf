@@ -12,18 +12,18 @@ resource "null_resource" "ec2_key_pair" {
   provisioner "local-exec" {
     command =  <<EOT
 # Remove any previous key-pairs
-rm
+# rm
 
 # Delete the existing key pair if it exists
-aws ec2 delete-key-pair --key-name MyKeyPair --region ${var.region} || echo "Key pair MyKeyPair does not exist or was already deleted."
+aws ec2 delete-key-pair --key-name ${var.prefix}-wjs-${random_id.env_display_id.hex} --region ${var.region} || echo "Key pair ${var.prefix}-wjs-${random_id.env_display_id.hex} does not exist or was already deleted."
 
 # Create a new key pair and output to a temporary file
-aws ec2 create-key-pair --key-name MyKeyPair --query 'KeyMaterial' --output text --region ${var.region} > temp_key.pem
+aws ec2 create-key-pair --key-name ${var.prefix}-wjs-${random_id.env_display_id.hex} --query 'KeyMaterial' --output text --region ${var.region} > temp_key.pem
 
 # If successful, rename the temporary key file to MyKeyPair.pem
 if [ $? -eq 0 ]; then
-  mv temp_key.pem MyKeyPair.pem
-  chmod 400 MyKeyPair.pem # Restrict file permissions
+  mv ${var.prefix}-wjs-${random_id.env_display_id.hex}.pem ${var.prefix}-wjs-${random_id.env_display_id.hex}.pem
+  chmod 400 ${var.prefix}-wjs-${random_id.env_display_id.hex}.pem # Restrict file permissions
 fi
 EOT
   }
@@ -37,7 +37,7 @@ EOT
 resource "aws_instance" "windows_instance" {
   ami                    = data.aws_ami.windows.image_id
   instance_type          = "t3.xlarge"
-  key_name               = "MyKeyPair" # Replace with your key pair name
+  key_name               = "${var.prefix}-wjs-${random_id.env_display_id.hex}" # Replace with your key pair name
   vpc_security_group_ids = [aws_security_group.windows_sg.id]
   subnet_id              = aws_subnet.public_subnets[0].id # Associate with the first public subnet - put this in private subnet?
   get_password_data      = true
