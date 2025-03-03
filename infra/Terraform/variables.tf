@@ -105,3 +105,10 @@ variable "windows_jump_server_password" {
   type        = string
   default     = "thatsAGoodPass"
 }
+
+
+variable "oracle_ami" {
+  description = "Oracle AMI"
+  type        = string
+  default     = "ami-027951e78de46a00e"
+}

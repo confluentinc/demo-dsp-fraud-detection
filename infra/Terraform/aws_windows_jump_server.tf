@@ -8,26 +8,19 @@ data "aws_ami" "windows" {
   }
 }
 
-resource "null_resource" "ec2_key_pair" {
-  provisioner "local-exec" {
-    command =  <<EOT
-# Remove any previous key-pairs
-# rm
-
-# Delete the existing key pair if it exists
-aws ec2 delete-key-pair --key-name ${var.prefix}-wjs-${random_id.env_display_id.hex} --region ${var.region} || echo "Key pair ${var.prefix}-wjs-${random_id.env_display_id.hex} does not exist or was already deleted."
-
-# Create a new key pair and output to a temporary file
-aws ec2 create-key-pair --key-name ${var.prefix}-wjs-${random_id.env_display_id.hex} --query 'KeyMaterial' --output text --region ${var.region} > temp_key.pem
-
-# If successful, rename the temporary key file to MyKeyPair.pem
-if [ $? -eq 0 ]; then
-  mv ${var.prefix}-wjs-${random_id.env_display_id.hex}.pem ${var.prefix}-wjs-${random_id.env_display_id.hex}.pem
-  chmod 400 ${var.prefix}-wjs-${random_id.env_display_id.hex}.pem # Restrict file permissions
-fi
-EOT
-  }
-}
+# resource "null_resource" "ec2_key_pair" {
+#   provisioner "local-exec" {
+#     command =  <<EOT
+# # Remove any previous key-pairs
+#
+# # Delete the existing key pair if it exists
+# aws ec2 delete-key-pair --key-name ${var.prefix}-key-${random_id.env_display_id.hex}.pem --region ${var.region} || echo "Key pair ${var.prefix}-key-${random_id.env_display_id.hex}.pem does not exist or was already deleted."
+#
+# # Create a new key pair and output to a temporary file
+# aws ec2 create-key-pair --key-name ${var.prefix}-key-${random_id.env_display_id.hex} --query 'KeyMaterial' --output text --region ${var.region} > ${var.prefix}-key-${random_id.env_display_id.hex}.pem
+# EOT
+#   }
+# }
 
 # other logs - C:\UserData.log
 # boot logs - C:\ProgramData\Amazon\EC2Launch\log\agent.log
@@ -37,7 +30,7 @@ EOT
 resource "aws_instance" "windows_instance" {
   ami                    = data.aws_ami.windows.image_id
   instance_type          = "t3.xlarge"
-  key_name               = "${var.prefix}-wjs-${random_id.env_display_id.hex}" # Replace with your key pair name
+  key_name               = aws_key_pair.tf_key.key_name # Replace with your key pair name
   vpc_security_group_ids = [aws_security_group.windows_sg.id]
   subnet_id              = aws_subnet.public_subnets[0].id # Associate with the first public subnet - put this in private subnet?
   get_password_data      = true
@@ -150,7 +143,7 @@ Write-Host "Setup completed successfully!"
 </powershell>
 EOF
 
-  depends_on = [null_resource.ec2_key_pair, aws_db_instance.oracle_db]
+  depends_on = [aws_db_instance.oracle_db]
 }
 # $ used to equal \$
 
@@ -191,7 +184,7 @@ output "windows_jump_server_details" {
   value = {
     ip       = aws_instance.windows_instance.public_ip
     username = "Administrator"
-    password = rsadecrypt(aws_instance.windows_instance.password_data, file("${path.module}/MyKeyPair.pem"))
+    password = nonsensitive(rsadecrypt(aws_instance.windows_instance.password_data, local_file.tf_key.content))
   }
 }
 
