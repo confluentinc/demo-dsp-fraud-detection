@@ -13,12 +13,9 @@ resource "confluent_environment" "staging" {
   }
 }
 
-
-
 # ------------------------------------------------------
 # KAFKA Cluster, Attachement and Connection
 # ------------------------------------------------------
-
 resource "confluent_kafka_cluster" "cluster" {
   display_name = "${var.prefix}-cluster-${random_id.env_display_id.hex}"
   availability = "MULTI_ZONE"
@@ -30,33 +27,9 @@ resource "confluent_kafka_cluster" "cluster" {
   }
 }
 
-resource "confluent_private_link_attachment" "pla" {
-  cloud = "AWS"
-  region = var.region
-  display_name = "${var.prefix}-staging-aws-platt-${random_id.env_display_id.hex}"
-  environment {
-    id = confluent_environment.staging.id
-  }
-}
-
-resource "confluent_private_link_attachment_connection" "plac" {
-  display_name = "${var.prefix}-staging-aws-plattc-${random_id.env_display_id.hex}"
-  environment {
-    id = confluent_environment.staging.id
-  }
-  aws {
-    vpc_endpoint_id = aws_vpc_endpoint.privatelink.id
-  }
-
-  private_link_attachment {
-    id = confluent_private_link_attachment.pla.id
-  }
-}
-
 # ------------------------------------------------------
 # SERVICE ACCOUNTS
 # ------------------------------------------------------
-
 resource "confluent_service_account" "app-manager" {
   display_name = "${var.prefix}-app-manager-${random_id.env_display_id.hex}"
   description  = "Service account to manage 'inventory' Kafka cluster"
@@ -65,12 +38,11 @@ resource "confluent_service_account" "app-manager" {
 # ------------------------------------------------------
 # ROLE BINDINGS
 # ------------------------------------------------------
-
 resource "confluent_role_binding" "app-manager-kafka-cluster-admin" {
   principal   = "User:${confluent_service_account.app-manager.id}"
   role_name   = "EnvironmentAdmin"
   # TODO: replace when in production
-  crn_pattern = replace(confluent_environment.staging.resource_name, "devel.cpdev.cloud", "confluent.cloud")
+  crn_pattern = confluent_environment.staging.resource_name
 }
 
 data "confluent_schema_registry_cluster" "sr" {
@@ -105,10 +77,26 @@ resource "confluent_api_key" "schema-registry-api-key" {
   ]
 }
 
-output "confluent_environment_name" {
-  value = confluent_environment.staging.display_name
+resource "confluent_flink_compute_pool" "flink_pool" {
+  display_name     = "default"
+  cloud            =  upper(data.confluent_flink_region.flink_region.cloud)
+  region           =  data.confluent_flink_region.flink_region.region
+  max_cfu          = 50
+  environment {
+    id = confluent_environment.staging.id
+  }
 }
 
-output "confluent_cluster_name" {
-  value = confluent_kafka_cluster.cluster.display_name
+data "confluent_flink_region" "flink_region" {
+  cloud  = "AWS"
+  region = var.region
+}
+
+
+output "confluent_details" {
+  value = {
+    environment_name = confluent_environment.staging.display_name
+    kafka_cluster_name = confluent_kafka_cluster.cluster.display_name
+    flink_pool_name = confluent_flink_compute_pool.flink_pool.display_name
+  }
 }

@@ -60,19 +60,11 @@ resource "aws_opensearch_domain" "OpenSearch" {
   }
 }
 
-output "opensearch_endpoint" {
-  value = "https://${aws_opensearch_domain.OpenSearch.endpoint}"
-}
-
-
-output "opensearch_dashbaord_url" {
-  value = "https://${aws_opensearch_domain.OpenSearch.dashboard_endpoint}"
-}
-
-output "opensearch_username" {
-  value = var.opensearch_master_username
-}
-
-output "opensearch_password" {
-  value = var.opensearch_master_password
+output "opensearch_details" {
+  value = {
+    endpoint = "https://${aws_opensearch_domain.OpenSearch.endpoint}"
+    dashboard_url = "https://${aws_opensearch_domain.OpenSearch.dashboard_endpoint}"
+    username = var.opensearch_master_username
+    password = var.opensearch_master_password
+  }
 }

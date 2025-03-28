@@ -1,27 +1,43 @@
-# Build a Fraud Detection Application with Private Oracle CDC Connector
-Fraud detection is crucial for protecting the financial assets of individuals and organizations in an increasingly digital world, leveraging analytical technologies to identify and prevent unethical activities and costly consequences. As digital transactions become more common, the complexity of fraud schemes also increases, requiring sophisticated detection methods. Modern methods like integrating advanced analytical and artificial intelligence algorithms help in identifying complex fraudulent patterns within vast datasets. 
+# Real Time Fraud Detection With Confluent Cloud
+This demo will enable you to provision and test **real time** fraud detection using Private DB Connectors, Kafka event streams & real time Flink processing all easily orchestrated on Confluent Cloud. 
 
-Private connectors are essential in this context, serving to connect an organization’s internal systems with external services and applications. They facilitate the secure flow of information from multiple sources, providing a comprehensive view for detecting fraud. Additionally, ensuring data transfers over secure channels help maintain data integrity and confidentiality, crucial for preventing data breaches and ensuring regulatory compliances. 
+Fraud detection is a common use case for Confluent Cloud customers because fraud must be caught in real time to prevent theft.  
 
-This demo demonstrates how financial institutions can capture fraud transactions in real-time without leaving the public internet by leveraging stream processing and private connectors. This approach enables the seamless and secure synchronization of data across systems, ensuring real-time detection and response to potential fraudulent activities. Through stream processing with Flink, transactions are joined, filtered, aggregated and analyzed in real time, while private connectors ensure that data flows securely between systems, offering a robust solution for modern fraud detection. This use case will cover key new Confluent features using a realistic application deployed on AWS.
+This demo demonstrates how financial institutions can capture fraudulent transactions in real-time from databases that are on secure internal private networks by leveraging stream processing and private connectors.
 
 ## Demo Diagram
 ![architecture_diagram.png](img/architecture_diagram.png)
-The Demo features real-time fraud detection capabilities consisting of:
-- Backend/Frontend setup suitable for various real-world applications
-- Oracle DB on a private internal network for production use cases
-- Oracle DB CDC Fully Managed Connector that streams events triggered Database interactions
-- Confluent Kafka Cluster to store, stream & manage transaction & fraud events
-- Confluent Flink Compute Pool for real-time fraud detection based on transaction events deriving from the Oracle DB 
+The Demo was built to reflect a typical software production environment. It contains many common components such as:
+- An EKS Kubernetes cluster hosts an app that can be accessed via the web
+- An Oracle DB on a private internal network; No production database is publicly accessible
+
+Real-Time fraud detection is achieved by adding a few more components
+- A Kafka Cluster to store, stream & manage transaction & fraud events
+- An Oracle DB Connector that streams database entries as Kafka events privately to a Kafka cluster hosted on Confluent Cloud
+- A Flink Compute Pool for real-time fraud analysis based on transaction events deriving from the Oracle DB 
 - OpenSearch Fully Managed Sink Connector to stream fraud events to a dashboard for the fraud team
 - OpenSearch Instance to showcase dashboards for the fraud team's analysis and decision-making
 ---
 
-## Prerequisites 
+## Table of Contents
+1. [Prerequisites](#prerequisites)
+2. [Provision Infrastructure with Terraform](#provision-infrastructure-with-terraform)
+3. [Validate Networking Infrastructure](#validate-networking-infrastructure)
+4. [Oracle DB Configuration](#oracle-db-configuration)
+5. [Setup Oracle DB CDC Fully Managed Connector V1](#setup-oracle-db-cdc-fully-managed-connector-v1)
+7. [Create Real & Fraudulent Transactions with the Web UI](#create-real--fraudulent-transactions-with-the-web-ui)
+8. [Setup Flink Compute Queries for Real-Time Stream Processing](#setup-flink-compute-queries-for-real-time-stream-processing)
+9. [Setup OpenSearch Sink Connector](#setup-opensearch-sink-connector)
+10. [Setup Opensearch Dashboard](#setup-opensearch-dashboard)
+11. [Conclusion](#conclusion)
 
-### Software Prerequisites
+---
 
-#### 1. Install Homebrew
+## Prerequisites
+
+<details>
+<summary>Installing Homebrew</summary>
+
 Homebrew is a package manager for macOS, necessary for installing Docker or other dependencies. Follow these steps to verify and install Homebrew:
 1. Verify if Homebrew is installed by running:
    ```bash
@@ -43,9 +59,12 @@ Homebrew is a package manager for macOS, necessary for installing Docker or othe
    ```
    Homebrew X.X.X
    ```
-   
-#### 2. Install All Other Software via HomeBrew
-Install and validate all required software for the demo with the following command
+
+</details>
+
+<details>
+<summary>Install Supporting Software</summary>
+In this section we will install and validate all required software for the demo with the following command
 
 1. Run the command to install AWS CLI using Homebrew:
    ```bash
@@ -54,46 +73,52 @@ Install and validate all required software for the demo with the following comma
    brew install hashicorp/tap/terraform
    brew install confluentinc/tap/cli
    brew install kubectl
-   brew install jq
    ```
 
-#### 3. Validate Software Installations
-The Terraform Command Line Interface (CLI) is required to perform Terraform actions.
 
-2. Verify the installation:
+2. Verify the installation with the following command
+
    ```bash
    aws --version
    terraform -version
    confluent version
    kubectl version --client
-   jq --version
-   ```
-   **Expected Output**:
-   ```plaintext
-   You should see verion info for each program
    ```
    
-#### 4. Windows Jump Server Software Installation
+   **Expected Output**:
+   ```plaintext
+   You should see version info for each program
+   ```
+
+</details>
+
+<details>
+<summary>Windows Jump Server Software Installation</summary>
+
 A Jump server on the internal network is required to connect to the Oracle DB that will be on a private internal network; the following software will allow you to connect to this jump server.
 
 Download this application called `Windows App` for your specific OS.
 
+</details>
 
-### 2. API Key Prerequisites
+<details>
+<summary id="create_aws_admin_api_key">Create AWS Admin API Key</summary>
 
-#### 1. Configure AWS API KEY
-
-In IAM create a User that has Admin Permissions 
+AWS Admin API keys are required to provision the necessary AWS infrastructure.
 
 1. Create a new AWS IAM User
 2. Grant the User Admin Permissions
 3. Create API Key associated with the admin user (this should return a key & secret)
-4. Copy the API key & secret into a usable place **Note:** Copy the region being used as well; Ex: `us-east-1`
-5. Run `aws configure` and enter the appropriate API Key, Secret, & Region when prompted. **Note:** Region should be the same region User was created in
+4. Copy the API key & secret into a usable place 
+**Note:** Copy the region being used as well; Ex: `us-east-1`
+5. Run `aws configure` and enter the appropriate API Key, Secret, & Region when prompted. 
+**Note:** Region should be the same region User was created in
 
-#### 2. Configure Confluent Cloud API Key
+</details>
 
-In Confluent Cloud Create an API Key with  `Cloud resource management` Level Permissions
+<details>
+<summary id="create_cc_api_key">Create Confluent Cloud API Keys</summary>
+Confluent Cloud `Cloud resource management` API keys are required to provision the necessary Confluent Cloud infrastructure.
 
 1. Log into Confluent
 2. Open the sidebar menu and select `API keys`
@@ -102,28 +127,103 @@ In Confluent Cloud Create an API Key with  `Cloud resource management` Level Per
 5. Select `Cloud resource management`
 6. Create the API key and copy the Key & Secret into a usable place
 
+</details>
+
 ---
 
-## Terraform Setup
-Follow these steps to configure Terraform, which will auto-provision essential infrastructure components.
+## Provision Infrastructure with Terraform
+Terraform is used to automatically provision and configure infrastructure for both AWS and CC. 
 
-**Note:** If the pre-requisites are not completed correctly the following will fail
+ >[!CAUTION]
+ >If the pre-requisites are not completed correctly the following will fail!
 
-### 1. Configure Terraform Variables
+
+<details>
+<summary>Set Terraform Variables</summary>
+Terraform is configured via a[terraform.tfvars file](./infra/Terraform/terraform.tfvars).
+
+All variables in the table below must be set in the [terraform.tfvars file](./infra/Terraform/terraform.tfvars) in order for Terraform to provision the infrastructure.
+
+> [!NOTE]
+> `example_var_key_name="example_var_key_value"`
+
+| Key Name                   |  Type  | Description                           | Required |
+|:---------------------------|:------:|:--------------------------------------|---------:|
+| confluent_cloud_api_key    | string | [Key From CC](#create_cc_api_key)     |     True |
+| confluent_cloud_api_secret | string | [Secret From CC](#create_cc_api_key)  |     True |
+| aws_key                    | string | [Key From AWS](#create_cc_api_key)    |     True |
+| aws_secret                 | string | [Secret From AWS](#create_cc_api_key) |     True |
 
 
-In the [terraform.tfvars file](./infra/Terraform/terraform.tfvars) ensure the following variables are set:
+</details>
 
-Example: `example_var_key_name="example_var_key_value"`
-
-- `confluent_cloud_api_key`: Key from Confluent
-- `confluent_cloud_api_secret`: Secret from Confluent
-- `aws_key`: Key from AWS
-- `aws_secret`: Secret from AWS
-
-### 2. Initialize Terraform Providers
-
+<details>
+<summary>Initialize Terraform Providers</summary>
 This step verifies your access to the cloud providers used by Terraform for infrastructure provisioning.
+
+The following resources will be provisioned:
+
+| Provider   |                Type                | Role                                                                           | Terraform File                                                             | Resource Name                      |
+|:-----------|:----------------------------------:|:-------------------------------------------------------------------------------|:---------------------------------------------------------------------------|:-----------------------------------|
+| AWS        |                VPC                 | Virtual Private Network for AWS Subnets                                        | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | main                               |
+| AWS        |           Private Subnet           | Network for private AWS resources                                              | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | private_subnets                    |
+| AWS        |           Public Subnet            | Network for public AWS resources                                               | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | public_subnets                     |
+| AWS        |          Internet Gateway          | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | igw                                |
+| AWS        |                EIP                 | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | eip                                |
+| AWS        |            NAT Gateway             | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | natgw                              |
+| AWS        |        Private Route Table         | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | private_route_table                |
+| AWS        |         Public Route Table         | Ask Ahmed here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | public_route_table                 |
+| AWS        |  Private Route Table Association   | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | priv_subnet_associations           |
+| AWS        |   Public Route Table Association   | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | pub_subnet_associations            |
+| AWS        |        Security Group Role         | Grant Access to Port 443                                                       | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | self_ingress_443                   |
+| AWS        |           Security Group           | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | sg                                 |
+| AWS        |            VPC Endpoint            | Allow Access to Private Subnet                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | privatelink                        |
+| AWS        |           Route53 Record           | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | privatelink                        |
+| AWS        |          DB Subnet Group           | Ask Ahmed here                                                                 | [aws_oracledb.tf](./infra/Terraform/aws_oracledb.tf)                       | db_subnet_group                    |
+| AWS        |           Security Group           | Grant Ingress Access to DB Port 1521 & Global Egress                           | [aws_oracledb.tf](./infra/Terraform/aws_oracledb.tf)                       | db_sg                              |
+| AWS        |           RDS Oracle DB            | Private DB containing transaction records                                      | [aws_oracledb.tf](./infra/Terraform/aws_oracledb.tf)                       | oracle_db                          |
+| AWS        |                AMI                 | Image for Windows Jump Server                                                  | [aws_windows_jump_server.tf](./infra/Terraform/aws_windows_jump_server.tf) | windows                            |
+| LOCAL      |            Local Script            | Create & Upload Key Pair for Windows Jump Server                               | [aws_windows_jump_server.tf](./infra/Terraform/aws_windows_jump_server.tf) | ec2_key_pair                       |
+| AWS        |              Instance              | EC2 Instance running Jump Server Image                                         | [aws_windows_jump_server.tf](./infra/Terraform/aws_windows_jump_server.tf) | windows_instance                   |
+| AWS        |           Secruity Group           | Grant Ingress to Port 3389 & Global Egress                                     | [aws_windows_jump_server.tf](./infra/Terraform/aws_windows_jump_server.tf) | windows_sg                         |
+| AWS        |         OpenSearch Domain          | Create Opensearch Instance                                                     | [aws_opensearch.tf](./infra/Terraform/aws_opensearch.tf)                   | OpenSearch                         |
+| AWS        |              IAM Role              | Unknown                                                                        | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_cluster_role                   |
+| AWS        |              IAM Role              | Unknown                                                                        | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_node_role                      |
+| AWS        |              IAM Role              | Unknown                                                                        | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_pod_identity                   |
+| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_cluster_role_policy            |
+| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_node_role_policy               |
+| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | AMAZONEKS_CNI_Policy               |
+| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | AmazonEC2ContainerRegistryReadOnly |
+| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | s3_read_only                       |
+| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | ec2_read_only                      |
+| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_cluster_role_policy            |
+| AWS        |    EKS Pod Identity Association    | Unknown                                                                        | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | example                            |
+| AWS        |            EKS Cluster             | Create the EKS Cluster                                                         | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_cluster                        |
+| AWS        |       Kubernetes Config Map        | Associate Permissions with EKS Cluster                                         | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | aws_auth                           |
+| AWS        |           EKS Node Group           | Configure EKS Nodes in Cluster                                                 | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_node_group                     |
+| AWS        |             EKS Add On             | Add AWS Kube Proxy Add on to Cluster                                           | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | kube_proxy                         |
+| AWS        |             EKS Add On             | Add AWS CoreDNS Add on to Cluster                                              | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | coredns                            | 
+| AWS        |             EKS Add On             | Add AWS Pod Identity Add on to Cluster                                         | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | pod_identity                       | 
+| AWS        |             EKS Add On             | Add AWS VPC CNI Add on to Cluster                                              | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | vpc_cni                            | 
+| CC         |            Environment             | Create Environment in CC                                                       | [confluent.tf](./infra/Terraform/confluent.tf)                             | staging                            |
+| CC         |           Kafka Cluster            | Create Kafka Cluster in CC                                                     | [confluent.tf](./infra/Terraform/confluent.tf)                             | cluster                            |
+| CC         |      Private Link Attachment       | Allow Connection between AWS & CC Environment                                  | [confluent.tf](./infra/Terraform/confluent.tf)                             | pla                                |
+| CC         | Private Link Attachment Connection | Connect CC Environment to AWS VPC Endpoint                                     | [confluent.tf](./infra/Terraform/confluent.tf)                             | plac                               |
+| CC         |          Service Account           | Service Account to Manage CC Kafka Cluster                                     | [confluent.tf](./infra/Terraform/confluent.tf)                             | app-manager                        |
+| CC         |            Role Binding            | Bind Admin Role to Service Account for CC Environment                          | [confluent.tf](./infra/Terraform/confluent.tf)                             | app-manager-kafka-cluster-admin    |
+| CC         |      Schema Registry Cluster       | Provision Schema Registry for Kafka Cluster                                    | [confluent.tf](./infra/Terraform/confluent.tf)                             | sr                                 |
+| CC         |              API Key               | API Key to Manage Schema Registry                                              | [confluent.tf](./infra/Terraform/confluent.tf)                             | schema-registry-api-key            |
+| CC         |             DNS Record             | Create URL for CC Env for AWS Private Link                                     | [confluent.tf](./infra/Terraform/confluent.tf)                             | main                               |
+| CC         |              Gateway               | Create Gateway to Connect CC Environment to AWS Region                         | [confluent.tf](./infra/Terraform/confluent.tf)                             | confluent_rds_gateway              |
+| CC         |            Access Point            | Create Access Point to Connect CC Environment to RDS                           | [confluent.tf](./infra/Terraform/confluent.tf)                             | confluent_oracle_db_access_point   |
+| CC         |         Flink Compute Pool         | Create A Flink Compute Pool for CC Environment                                 | [flink.tf](./infra/Terraform/flink.tf)                                     | flink_pool                         |
+| CC         |            Flink Rgion             | Create Flink Region in AWS for flink cluster                                   | [flink.tf](./infra/Terraform/flink.tf)                                     | flink_region                       |
+| Local      |            Kube Config             | Update local kubeconfig file with newly provisioned Kubernetes Cluster Details | [kubernetes_setup.tf](./infra/Terraform/kubernetes_setup.tf)               | kube_config                        | 
+| Kubernetes |             Config Map             | Create Config Map for Deployment Configs/Secrets                               | [kubernetes_setup.tf](./infra/Terraform/kubernetes_setup.tf)               | fraud_demo_config                  | 
+| Kubernetes |             Deployment             | Create Deployment to run UI                                                    | [kubernetes_setup.tf](./infra/Terraform/kubernetes_setup.tf)               | fraud_demo                         | 
+| Kubernetes |              Service               | Create Service to connect Deployment to Web                                    | [kubernetes_setup.tf](./infra/Terraform/kubernetes_setup.tf)               | ui                                 | 
+
+
 
 Run the following command from the same directory as the `README.md` file.
 
@@ -135,30 +235,17 @@ Run the following command from the same directory as the `README.md` file.
    ```text 
    Terraform has been successfully initialized!
    ```
+</details>
 
-### 3. Create the Infrastructure via Terraform
+<details>
+<summary>Provision Infrastructure via Terraform</summary>
 
-#### Infrastructure Provisioned Overview
+This step will provision all the necessary infrastructure.
 
 The following steps will set up, connect, and synchronize the specified resources across the mentioned providers:
 
 **Note:** For more info on how resources interact please see the [Demo Diagram](#demo-diagram)
 
-AWS:
- - AWS Managed Oracle DB
- - Private Network Infrastructure
- - Windows Machine 
- - Private Network Connection Point
- - OpenSearch Cluster
- - EKS Kubernetes Cluster
- - Kubernetes Deployment for Demo UI
-
-Confluent:
- - Confluent Cloud Environment
- - Kafka Cluster
- - Flink Compute Pool
- - Private Schema Registry
- - Egress & Ingress Networking
 
 #### Provisioning the Infrastructure
 Run the following bash command from the directory containing the README.md file. This will start provisioning most of the demos required infrastructure.
@@ -166,17 +253,17 @@ Run the following bash command from the directory containing the README.md file.
 **Note:** This step is API intensive and may take 20-30 minutes.
 
 **Note:** If it fails initially rerun the apply; it will only take 5-7 minutes & will work the second time.
-
+   
    ```bash
    terraform -chdir=infra/Terraform apply --auto-approve
    ```
-
+   
    **Note:** Actual output will be different based on provisioned resources
-
+   
    **Note:** This output can be regenerated without in ~30 seconds after it has been generated once
-
+   
    **Note:** Manually configured Resources will require inputs based on this output - exclude the quotes
-
+   
    **Note** This output will occur the first time; rerun the apply and it will succeed
    ```text
    │ Error: error waiting for Access Point "ap-4vw528" to provision: access point "ap-4vw528" provisioning status is "FAILED": 
@@ -187,7 +274,7 @@ Run the following bash command from the directory containing the README.md file.
    │ 
    ╵
    ```
-
+   
    **Expected Approximate Output:**
    ```text
    confluent_environment_name = "frauddetectiondemo-environment-3912b8ae"
@@ -206,19 +293,28 @@ Run the following bash command from the directory containing the README.md file.
    windows_instance_username = "Administrator"
    ```
 
+</details>
+
 ---
 
-## Validate Networking Infrastructure Provisioned
+## Validate Networking Infrastructure
 In the next step we will validate that the networking between AWS & Confluent is working as expected.
 
-### Validate AWS Private Endpoint ![aws_endpoint_services.png](img/aws_endpoint_services.png)
+<details>
+<summary>Validate AWS Private Endpoint</summary>
+
+![aws_endpoint_services.png](img/aws_endpoint_services.png)
 1. Log into the AWS console
 2. Enter `endpoint services` into the `search` textbox
 3. Select the `endpoint services` feature button
 4. You will see an entry in the list view; under the `State` column it should say active
 5. You know the AWS Endpoint to view the Oracle DB state changes within the private network is correctly configured
+</details>
 
-### Validate Confluent Private Egress ![confluent_networking.png](img/confluent_networking.png)
+<details>
+<summary>Validate Confluent Private Egress & Ingress</summary>
+
+![confluent_networking.png](img/confluent_networking.png)
 1. Reopen the Windows Jump Server; this is the server setup in the [access the internal Windows machine section](#access-the-internal-windows-machine)
 2. Log into [Confluent Cloud](https://confluent.cloud/login)
 3. Select `Environments`
@@ -228,77 +324,31 @@ In the next step we will validate that the networking between AWS & Confluent is
    1. Each entries `Status` column will say `Ready`
    2. One entries `Direction` column will say `Egress`, the others will say `Ingress`
 7. You know the Confluent Ingress/Egress to interact with AWS has been provisioned correctly
+</details>
 
 ---
 
-## Database Setup
 
-In order for the fully managed Oracle CDC Connector V1 to properly work with the Oracle DB provisioned via Terraform in AWS certain, Oracle DB settings must be configured.
-
-The Oracle DB is configured on a private network within AWS, making it inaccessible from your local machine, and only accessibile from a machine within the private network.
-
-This machine existing within the AWS private network has already been setup by Terraform and can be accessed using `Windows App` application that we downloaded in the [prerequisite software section](#4-windows-jump-server-software-installation).
-
-### Access The Internal Windows Machine
-
-1. Open the `Windows App`![windows_app_view.png](img/windows_app_view.png)
-2. Click the `+` Icon to add new Server Connection, Click `Add PC` from the dropdown menu
-3. Enter `windows_instance_ip` value from Terraform outputs in the `PC name:` textbox
-4. Click the `Credentials` dropdown menu, select `Add Credentials...`, A pop up menu will appear
-5. Enter `windows_instance_username` value from Terraform outputs into the `Username:` text field
-6. Enter `windows_instance_password` value from Terraform outputs into the `Password:` text field
-7. Click the `Add` button in the bottom right of the credentials pop up 
-8. Click the `Add` button in the bottom right of the instance pop up
-9. Click the newly created pop up titled with the `windows_instance_ip`
-10. You will be redirected to a Windows OS for the machine located the AWS Oracle DB network
-
-### Download Oracle DB client software on Internal Windows Machine
-
-1. Open the web browser on the machine
-2. Download your Database Tool of Choice (I prefer Pycharm) **Note:** Pycharm will automatically download Oracle JDK
-3. Download Oracle JDK 
-4. Open your DB tool
-5. Connect to the DB 
-
-### Configure Oracle DB with client
-1. Run the following command to configure the Database
-
-   ```oracdle
-   begin
-    rdsadmin.rdsadmin_util.alter_supplemental_logging(
-        p_action => 'ADD',
-        p_type   => 'ALL');
-   end;
-   ```
-2. Validate the database is configured
-   ```oracle
-   SELECT log_mode FROM v$database;
-   ```
-   
-   **Expected Output:**
-   ```text
-   LOG_MODE
-   -------
-   ARCHIVELOG
-   ```
-3. The database has now been configured.
-
-**Note:** Minimize the window to the Internal Windows Machine it will be used later (you can always connect again if you already closed it)
-
----
 
 ## Setup Oracle DB CDC Fully Managed Connector V1
 
 The following steps will result in database change events on the `DEMODB` database tables `USER_TRANSACTION` & `AUTH_USER` being streamed to Kafka topics `fd.USER_TRANSACTION` & `fd.AUTH_USER`
 
-### Navigate to cluster connectors![confluent_cluster_ui_view.png](img/confluent_cluster_ui_view.png)
+<details>
+<summary>Navigate to Cluster Connectors</summary>
+
+![confluent_cluster_ui_view.png](img/confluent_cluster_ui_view.png)
 1. Log into [Confluent Cloud](https://confluent.cloud/login)
 2. Select `Environments`
 3. Select the environment named after the `confluent_environment_name` output from Terraform
 4. Select the cluster named after the `confluent_cluster_name` output from Terraform
 5. Select `Connectors` in the Cluster sidebar menu on the left
+</details>
 
-### Create Oracle DB CDC Fully Managed Connector V1![oracle_connector_tile.png](img/oracle_connector_tile.png)
+<details>
+<summary>Create Oracle DB CDC Fully Managed Connector V1</summary>
+
+![oracle_connector_tile.png](img/oracle_connector_tile.png)
 1. Type `oracle cdc source premium` in the `search` text field
 2. Select the `Oracle CDC Source Premium` tile (it will be the only tile)
 3. Generate Connector API Key
@@ -331,157 +381,30 @@ The following steps will result in database change events on the `DEMODB` databa
    2. Click the `Continue` button
 8. Wait for the connector to initialize; this could take ~5 minutes; The connector tile will show `Running` status when it is ready **Note:** You may need to refresh the page to update the connector status
 9. The Connector has now successfully been setup and database change events on the `DEMODB` database tables `USER_TRANSACTION` & `AUTH_USER` will automatically be recorded to Kafka topic `fd.USER_TRANSACTION` & `fd.AUTH_USER`
+</details>
 
 ---
 
-## Update Kubernetes Cluster Access
-We need to allow our local computer to access the Kubernetes cluster via the AWS terminal
-
-### Navigate to the Cluster Access Panel
-1. Log into your AWS Console
-2. Navigate to the correct Region
-3. Navigate to the EKS Cluster Page
-4. Select the appropriate Cluster
-5. Select `Access` on the horizontal cluster menu
-6. Select the `Manage Access` button
-
-### Update Access Type to allow AWS IAM
-1. Select `EKS API and ConfigMap` option and then select `Save changes`; this will take ~5 minutes to update
-
-### Create IAM Access Entry
-1. Navigate back to the `Access` panel on the horizontal cluster menu; The `IAM access entries` card will activate the `Create access entry` button when the above setting is updated, click the `Create access entry` (you may need to refresh the page)
-2. In the `IAM Principal` dropdown select the [Admin user the AWS API key being used is configured with](#1-configure-aws-api-key)
-3. In the `Type` dropdown select `Standard`
-4. Click the `Next` button
-5. In the `PolicyName` dropdown select `AmazonEKSAdminPolicy`
-6. In the `Access Scope` select the `Cluster` radio button
-7. Click the `Next` button
-8. On the next page click the `Create` button
-
-### Add Access Policies to Created IAM Access Entry
-1. Navigate back to the `Access` panel on the horizontal cluster menu
-2. Click on the IAM Access Entry created in the [Create IAM Access Entry step](#create-iam-access-entry)
-3. Scroll down to the `Access policies` card
-4. Select `Add access policy` on the `Access policies` card
-5. In the `PolicyName` dropdown select `AmazonEKSAdminPolicy`
-6. In the `Access Scope` select the `Cluster` radio button
-7. Click the `Add access policy` button
-8. Repeat these steps for the `AmazonEKSClusterAdminPolicy`
-
----
-
-## Setup Web Application & Simulate Transactions
+## Create Real & Fraudulent Transactions with the Web UI
 Now that all the Infrastructure is provisioned and the database connector is provisioned and setup we can start creating real database transactions.
 
-### Validate Kubernetes Cluster Setup Terraform
-1. Ensure that only one Kubernetes Cluster is being created
-   ```bash
-   export AWS_REGION="us-west-2" # set the correct AWS Region 
-   aws eks list-clusters --region ${AWS_REGION} #
-   ```
-   **Expected Output:**
-   
-   Example of a successful output:
-   ```text
-   {
-       "clusters": [
-           "frauddetectiondemo-eks-cluster-<cluster-string-name>",
-      ]
-   }
-   ```
-   
-   **Note:** You will need to press `ctrl c` after this is ran
+<details>
+<summary>Connect to the Web UI</summary>
 
-2. Store the kubernetes cluster name so you can interact with it.
-   ```bash
-   export AWS_CLUSTER_NAME=$(aws eks list-clusters --region ${AWS_REGION} --output json | jq -r '.clusters[0]')
-   echo $AWS_CLUSTER_NAME
-   ```
-   
-   **Expected Output:**
-   
-   ```text
-   frauddetectiondemo-eks-cluster-<cluster-string-name>
-   ```
-   
-3. Update your local Kube config to enable `kubectl` command line client 
-   ```bash
-   aws eks --region ${AWS_REGION} update-kubeconfig --name ${AWS_CLUSTER_NAME}
-   ```
-
-   **Expected Output:**
-
-   ```text
-   Added new context arn:aws:eks:<region-name>:<account-id>:cluster/<cluster-name> to kubeconfig
-   ```
-
-4. Validate you can access the Pod
-   ```bash
-   kubectl get nodes
-   ```
-   
-   **Expected Output:**
-   ```text
-   NAME STATUS ROLES AGE VERSION ip-192-168-1-1.ec2.internal Ready  15m v1.25.6 ip-192-168-2-1.ec2.internal Ready  15m v1.25.6
-   ```
-5. Set working namespace to default
-   ```bash
-   kubectl config set-context --current --namespace=default
-   ```
-   **Expected Output:**
-   ```text
-   Context "<current-context>" modified.
-   ```
-6. Validate namespace is set to default
-   ```bash
-   kubectl config view --minify | grep namespace:
-   ```
-   
-   **Expected Output:**
-   ```text
-   namespace: default
-   ```
-7. Validate the web application is running
-   ```bash
-   export POD_LOGS=$(kubectl get pods --sort-by=.metadata.creationTimestamp \
-     -o jsonpath='{.items[?(@.metadata.name contains "fraud-demo")].metadata.name}' | awk 'NR==1')
-   echo $POD_LOGS
-   kubectl get pods
-   kubectl logs ${POD_LOGS}
-   ```
-   
-   **Expected Output**
-   ```text
-   10.0.11.94 - - [03/Feb/2025:19:03:03 +0000] "GET /health/ HTTP/1.1" 200 16 "-" "kube-probe/1.31+"
-   ```
-
-### Connect to the Web UI
-To connect to the Web UI and create transactions, we will need to port forward the pod connection to our localhost.
-
-1. Port forward from Kubernetes Pod to LocalHost
-   ```bash
-   export POD_PORT_FORWARD=$(kubectl get pods --sort-by=.metadata.creationTimestamp \
-    -o jsonpath='{.items[?(@.metadata.name contains "fraud-demo")].metadata.name}' | awk 'NR==1')
-   echo $POD_PORT_FORWARD
-   kubectl port-forward pod/${POD_PORT_FORWARD} 8000:8000
-   ```
-
-   **Expected Outputs:**
-   ```text
-   Forwarding from [::1]:8000 -> 8000
-   ```
-2. Open the Web UI by opening your webbrowser to [http://localhost:8000/fraud-demo/](http://localhost:8000/fraud-demo/)![transaction_ui.png](img/transaction_ui.png)
-3. In the UI turn on the `Stream Real Transactions` toggle; after it is toggled every ~5 seconds a valid transaction will be created and its details will be visible in the `All Transactions` table
-4. Allow 5-6 valid transactions to be created
-5. In the Web UI `Simulate Fraud` dropdown select each option and click the `Commit Fraud` button 4 times. Each option to select
+[transaction_ui.png](img/transaction_ui.png)
+1. Open the Web UI by opening your web browser to the URL found in the terraform output demo_details -> fraud_ui
+2. In the UI turn on the `Stream Real Transactions` toggle; after it is toggled every ~5 seconds a valid transaction will be created and its details will be visible in the `All Transactions` table
+3. Allow 5-6 valid transactions to be created
+4. In the Web UI `Simulate Fraud` dropdown select each option and click the `Commit Fraud` button 4 times. Each option to select
    - `Burst Count Transaction`
    - `Burst Amount Transaction`
    - `Large Amount Transaction`
    - `Foreign Transaction`
 
-   
-### Validate Topic Setup Success
-To validate the Connector topic streams were properly established, the following optional steps can be taken.
+</details>
+
+<details>
+<summary>Validate Transactions are Streamed to Topic via Connector </summary>
 
 1. Log into [Confluent Cloud](https://confluent.cloud/login)
 2. Select `Environments`
@@ -489,20 +412,44 @@ To validate the Connector topic streams were properly established, the following
 4. Select the cluster named after the `confluent_cluster_name` output from Terraform
 5. Select `Topics` in the Cluster sidebar menu on the left
 6. Examine the `Topic name` table column; the prefix.AUTH_USER & prefix.USER_TRANSACTION will exist. **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of [setting up the Oracle DB CDC connector](#setup-oracle-db-cdc-fully-managed-connector-v1).
+</details>
+
 ---
 
 ## Setup Flink Compute Queries for Real-Time Stream Processing
 We will proceed to establish real-time stream processing of Kafka Topic events using Flink. These events are protected and only available within the private network; therefore, we will need to access the events from the internal windows jump server.
 
-### Navigate to Flink Via Internal Windows Machine
-1. Reopen the Windows Jump Server; this is the server setup in the [access the internal Windows machine section](#access-the-internal-windows-machine)
-2. Log into [Confluent Cloud](https://confluent.cloud/login)
-3. Select `Environments`
-4. Select the environment named after the `confluent_environment_name` output from Terraform
-5. In the horizontal menu select `Flink` ![flink_tab_menu.png](img/flink_tab_menu.png)
-6. Select `Open SQL workspace`
+This machine existing within the private network has already been setup by Terraform and can be accessed using `Windows App` application that we downloaded in the [prerequisite software section](#4-windows-jump-server-software-installation).
 
-### Validate Flink has access to Oracle DB Connector Generated Events
+<details>
+<summary>Access Windows Machine in Internal Network</summary>
+
+1. Open the `Windows App`![windows_app_view.png](img/windows_app_view.png)
+2. Click the `+` Icon to add new Server Connection, Click `Add PC` from the dropdown menu
+3. Enter `windows_instance_ip` value from Terraform outputs in the `PC name:` textbox
+4. Click the `Credentials` dropdown menu, select `Add Credentials...`, A pop up menu will appear
+5. Enter `windows_instance_username` value from Terraform outputs into the `Username:` text field
+6. Enter `windows_instance_password` value from Terraform outputs into the `Password:` text field
+7. Click the `Add` button in the bottom right of the credentials pop up 
+8. Click the `Add` button in the bottom right of the instance pop up
+9. Click the newly created pop up titled with the `windows_instance_ip`
+10. You will be redirected to a Windows OS for the machine located within AWS Oracle DB network
+</details>
+
+
+<details>
+<summary>Navigate to Flink Via Internal Windows machine</summary>
+
+1. Log into [Confluent Cloud] on the Windows OS machine(https://confluent.cloud/login)
+2. Select `Environments`
+3. Select the environment named after the `confluent_environment_name` output from Terraform
+4. In the horizontal menu select `Flink` ![flink_tab_menu.png](img/flink_tab_menu.png)
+5. Select `Open SQL workspace`
+</details>
+
+<details>
+<summary>Validate Flink has access to Oracle DB Connector Generated Events</summary>
+
 1. In the Flink SQL Query Text Card enter **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of [setting up the Oracle DB CDC connector](#setup-oracle-db-cdc-fully-managed-connector-v1).
    ```oracle
    SELECT * FROM `prefix.AUTH_USER`;
@@ -515,7 +462,11 @@ We will proceed to establish real-time stream processing of Kafka Topic events u
    ```
    ![user_transaction_flink_query.png](img/user_transaction_flink_query.png)
 5. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will populate.
-### Update the User Transaction table watermark to allow Timestamp based operations
+</details>
+
+<details>
+<summary>Update the User Transaction table watermark to allow Timestamp based operations </summary>
+
 1. Click `+` Icon to the left of the Flink SQL Query Text Card to create a new query card
 2. In the new Flink SQL Query Text Card enter **Note:** the environment and cluster name will change based on the terraform output vars; the prefix will change as well based on what you determined it to be.
    ```oracle
@@ -524,8 +475,11 @@ We will proceed to establish real-time stream processing of Kafka Topic events u
    ```
 3. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will pop up
 ![update_watermark_flink_query.png](img/update_watermark_flink_query.png)
-   
-### Create Real-Time Flink Processing to Identify Fraudulent Events
+</details>
+
+<details>
+<summary>Process Transaction Events In Real Time with Flink</summary>
+
 1. Click `+` Icon to the left of the Flink SQL Query Text Card to create a new query card
 2. In the new Flink SQL Query Text Card enter 
 
@@ -575,8 +529,11 @@ We will proceed to establish real-time stream processing of Kafka Topic events u
      transanactions.total_amount > 1000 OR transanactions.transaction_count > 10;
    ```
 3. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will pop up
+</details>
 
-### Test the newly created fraud detection table
+<details>
+<summary>Validate Flink Generated Fraud Detection Topic</summary>
+
 1. Click `+` Icon to the left of the Flink SQL Query Text Card to create a new query card
 2. In the new Flink SQL Query Text Card enter 
    ```oracle
@@ -586,26 +543,35 @@ We will proceed to establish real-time stream processing of Kafka Topic events u
 ![flagged_user_flink_query.png](img/flagged_user_flink_query.png)
 
 **Note:** This will create a kafka topic named `flagged_user` which can be seen from the Kafka Cluster view as well.
+</details>
 
-### Generate more fraud events via UI to see real-time detection
-1. [Open the fraud UI](#connect-to-the-web-ui) **Note:** if the port forwarding is still running in the terminal it won't need to be port forwarded again.
+<details>
+<summary>Test Real Time Fraud Detection</summary>
+
+1. [Open the fraud UI](#create-real--fraudulent-transactions-with-the-web-ui) 
 2. In the Web UI `Simulate Fraud` dropdown select the `Burst Count Transaction` option and click the `Commit Fraud` button 4 times. 
 3. Navigate back to the `flagged_user` Flink SQL Query Card output setup in the [Test newly created fraud detection section](#test-the-newly-created-fraud-detection-table) & you will see fraud events generated (these can be validated via the `username` field)
+</details>
 
 ---
 
 ## Setup OpenSearch Sink Connector
 We will now stream the real-time fraud Kafka events generated through the Flink query to a dashboard for the fraud team's analysis.
 
-### Navigate to the Confluent Cluster Connector View
+<details>
+<summary>Navigate to Confluent Cluster Connector View</summary>
+
 1. Log into [Confluent Cloud](https://confluent.cloud/login)
 2. Select `Environments`
 3. Select the environment named after the `confluent_environment_name` output from Terraform
 4. Select the cluster named after the `confluent_cluster_name` output from Terraform
 5. Select `Connectors` in the Cluster sidebar menu on the left
 6. Click `+ add connector` button in top right of the view
+</details>
 
-### Create OpenSearch Sink Managed Connector V1
+<details>
+<summary>Create OpenSearch Sink Connector</summary>
+
 1. Type `opensearch sink` in the `search` text field
 2. Select the `OpenSearch Sink` tile (it will be the only tile)
 3. Select `flagged_user` checkbox in the Topics table![opensearch_sink_topic_selected.png](img/opensearch_sink_topic_selected.png)
@@ -633,38 +599,54 @@ We will now stream the real-time fraud Kafka events generated through the Flink 
 9. Click the `Continue` button on the next page
 10. You will now be on the Connectors UI page seeing a tile that is provisioning the OpenSearch Connector
 11. Wait for the Connector to initialize; it will take ~5 minutes and you may have to refresh the page
+</details>
 
 ---
 
-## Setup Opensearch Dashboard 
+## Setup Opensearch Dashboard
 
-### Log into OpenSearch Dashboard
+<details>
+<summary>Log into OpenSearch</summary>
+
 1. Go to URL from the Terraform output `opensearch_dashbaord_url`
 2. Log into Opensearch using the Terraform outputs `opensearch_password` & `opensearch_username`
 3. Click out of any modal pop-ups
+</details>
 
-### Create Dashboard for Flagged users
+<details>
+<summary>Create Dashboard for Users Flagged With Fraud</summary>
+
 1. Select the side menu from the 3 horizontal lines icon in the top right
 2. Select `Dashbaord Management` > `Dashboard Managment` **Note:** If this is not available in the menu create a empty dashboard and try again.
 3. Click `Saved Objects` menu option on the vertical menu on the right
 4. Select `Import` on the top right
 5. Select `Import` and select the `fraud_dashboard.ndjson` [filepath](/dashboards/fraud_dashboard.ndjson) 
 6. Wait for it to import 
+</details>
 
-### View the Dashboard for Flagged Users
+<details>
+<summary>View Dashboard for Users Flagged With Fraud</summary>
+
 1. Select the side menu from the 3 horizontal lines icon in the top right
 2. Select `OpenSearch Dashboard` > `Dashboards`
 3. Select `Fraud Dashboard` from the list view
 4. You can see dashboards describing fraud events determined via flink in real-time
+</details>
 
-### Generate Real & Fraudulent transactions and view them in the fraud dashboard![opensearch_dashboard.png](img/opensearch_dashboard.png)
-1. [Open the fraud UI](#connect-to-the-web-ui) **Note:** if the port forwarding is still running in the terminal it won't need to be port forwarded again.
+<details>
+<summary>Generate Real & Fraudulent transactions and view them in the fraud dashboard</summary>
+
+![opensearch_dashboard.png](img/opensearch_dashboard.png)
+1. [Open the fraud UI](#create-real--fraudulent-transactions-with-the-web-ui)
 2. In the UI turn on the `Stream Real Transactions` toggle; after it is toggled every ~5 seconds a valid transaction will be created and its details will be visible in the `All Transactions` table
 3. Take note of the latest usernames from these transactions; they won't show up in the fraud dashboard
 4. In the Web UI `Simulate Fraud` dropdown select the `Burst Count Transaction` option and click the `Commit Fraud` button 4 times. 
 5. Take note of the 4 usernames correlated with these fraud events in the `All Transactions` table; they will be visible in the OpenSearch Fraud Dashboard
 6. Navigate back to the Fraud Dashboard created in the [View the Dashboard for Flagged Users section](#view-the-dashboard-for-flagged-users); You will see the 4 usernames noted in step 5 of this section.
 
+</details>
+
+---
 
 ## Conclusion
 Congratulations! You have successfully deployed real-time fraud detection employing an Oracle DB on a private network, utilizing Confluent's Private Link, fully managed connectors, fully managed Kafka streams, and Opensearch dashboards.

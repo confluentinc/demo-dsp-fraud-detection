@@ -161,3 +161,28 @@ unset AWS_SESSION_TOKEN
 ---
 
 You have now successfully retrieved and set AWS access keys using the Okta SSO URL.
+
+
+## Unsetting env variables
+You may need to unset environment variables in order to use underlying config files such as an AWS config file
+```bash
+unset AWS_ACCOUNT_ID
+unset AWS_REGION
+unset AWS_ACCESS_KEY_ID
+unset AWS_SECRET_ACCESS_KEY
+unset AWS_KEYPAIR_NAME
+unset AWS_ROLE_NAME
+unset AWS_CLUSTER_NAME
+
+unset DOCKER_IMAGE_NAME
+unset DOCKER_IMAGE_TAG
+unset DOCKER_REPO_NAMESPACE
+
+unset PRIVATE_DOCKER_HOST_URL
+unset PRIVATE_DOCKER_REPO_URL
+unset PRIVATE_DOCKER_IMAGE_URL
+
+unset PUBLIC_DOCKER_HOST_URL
+unset PUBLIC_DOCKER_REPO_URL
+unset PUBLIC_DOCKER_IMAGE_URL
+```

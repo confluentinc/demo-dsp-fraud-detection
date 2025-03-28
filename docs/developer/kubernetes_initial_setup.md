@@ -44,12 +44,26 @@ export AWS_CLUSTER_NAME=$(aws eks list-clusters --region ${AWS_REGION} --output 
 echo $AWS_CLUSTER_NAME
 ```
 
+Ensure you are using the AWS User so you have access to the resources in Kubernetes
+```bash
+aws sts get-caller-identity --query "Arn" --output text | cut -d'/' -f2
+```
+
+**Expected Output&&
+```admin-user```
+
+
 ---
 
 ## Step 2: Update Local `kubeconfig` for AWS EKS
 
 ### Description
 AWS EKS requires an updated `kubeconfig` file to communicate with your Kubernetes cluster. The `update-kubeconfig` command generates or updates the `kubeconfig` file with the specified cluster’s information.
+
+### Clear Kube Config
+```bash
+> ~/.kube/config
+```
 
 ### Command to Execute
 ```bash
