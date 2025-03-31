@@ -157,84 +157,7 @@ All variables in the table below must be set in the [terraform.tfvars file](./in
 
 </details>
 
-<details>
-<summary>Initialize Terraform Providers</summary>
-This step verifies your access to the cloud providers used by Terraform for infrastructure provisioning.
 
-The following resources will be provisioned:
-
-| Provider   |                Type                | Role                                                                           | Terraform File                                                             | Resource Name                      |
-|:-----------|:----------------------------------:|:-------------------------------------------------------------------------------|:---------------------------------------------------------------------------|:-----------------------------------|
-| AWS        |                VPC                 | Virtual Private Network for AWS Subnets                                        | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | main                               |
-| AWS        |           Private Subnet           | Network for private AWS resources                                              | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | private_subnets                    |
-| AWS        |           Public Subnet            | Network for public AWS resources                                               | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | public_subnets                     |
-| AWS        |          Internet Gateway          | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | igw                                |
-| AWS        |                EIP                 | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | eip                                |
-| AWS        |            NAT Gateway             | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | natgw                              |
-| AWS        |        Private Route Table         | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | private_route_table                |
-| AWS        |         Public Route Table         | Ask Ahmed here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | public_route_table                 |
-| AWS        |  Private Route Table Association   | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | priv_subnet_associations           |
-| AWS        |   Public Route Table Association   | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | pub_subnet_associations            |
-| AWS        |        Security Group Role         | Grant Access to Port 443                                                       | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | self_ingress_443                   |
-| AWS        |           Security Group           | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | sg                                 |
-| AWS        |            VPC Endpoint            | Allow Access to Private Subnet                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | privatelink                        |
-| AWS        |           Route53 Record           | Ask Ahmed Here                                                                 | [aws_networking.tf](./infra/Terraform/aws_networking.tf)                   | privatelink                        |
-| AWS        |          DB Subnet Group           | Ask Ahmed here                                                                 | [aws_oracledb.tf](./infra/Terraform/aws_oracledb.tf)                       | db_subnet_group                    |
-| AWS        |           Security Group           | Grant Ingress Access to DB Port 1521 & Global Egress                           | [aws_oracledb.tf](./infra/Terraform/aws_oracledb.tf)                       | db_sg                              |
-| AWS        |           RDS Oracle DB            | Private DB containing transaction records                                      | [aws_oracledb.tf](./infra/Terraform/aws_oracledb.tf)                       | oracle_db                          |
-| AWS        |                AMI                 | Image for Windows Jump Server                                                  | [aws_windows_jump_server.tf](./infra/Terraform/aws_windows_jump_server.tf) | windows                            |
-| LOCAL      |            Local Script            | Create & Upload Key Pair for Windows Jump Server                               | [aws_windows_jump_server.tf](./infra/Terraform/aws_windows_jump_server.tf) | ec2_key_pair                       |
-| AWS        |              Instance              | EC2 Instance running Jump Server Image                                         | [aws_windows_jump_server.tf](./infra/Terraform/aws_windows_jump_server.tf) | windows_instance                   |
-| AWS        |           Secruity Group           | Grant Ingress to Port 3389 & Global Egress                                     | [aws_windows_jump_server.tf](./infra/Terraform/aws_windows_jump_server.tf) | windows_sg                         |
-| AWS        |         OpenSearch Domain          | Create Opensearch Instance                                                     | [aws_opensearch.tf](./infra/Terraform/aws_opensearch.tf)                   | OpenSearch                         |
-| AWS        |              IAM Role              | Unknown                                                                        | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_cluster_role                   |
-| AWS        |              IAM Role              | Unknown                                                                        | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_node_role                      |
-| AWS        |              IAM Role              | Unknown                                                                        | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_pod_identity                   |
-| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_cluster_role_policy            |
-| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_node_role_policy               |
-| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | AMAZONEKS_CNI_Policy               |
-| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | AmazonEC2ContainerRegistryReadOnly |
-| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | s3_read_only                       |
-| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | ec2_read_only                      |
-| AWS        |     IAM Role Policy Attachment     | Attach IAM role to policy                                                      | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_cluster_role_policy            |
-| AWS        |    EKS Pod Identity Association    | Unknown                                                                        | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | example                            |
-| AWS        |            EKS Cluster             | Create the EKS Cluster                                                         | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_cluster                        |
-| AWS        |       Kubernetes Config Map        | Associate Permissions with EKS Cluster                                         | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | aws_auth                           |
-| AWS        |           EKS Node Group           | Configure EKS Nodes in Cluster                                                 | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | eks_node_group                     |
-| AWS        |             EKS Add On             | Add AWS Kube Proxy Add on to Cluster                                           | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | kube_proxy                         |
-| AWS        |             EKS Add On             | Add AWS CoreDNS Add on to Cluster                                              | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | coredns                            | 
-| AWS        |             EKS Add On             | Add AWS Pod Identity Add on to Cluster                                         | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | pod_identity                       | 
-| AWS        |             EKS Add On             | Add AWS VPC CNI Add on to Cluster                                              | [aws_eks.tf](./infra/Terraform/aws_eks.tf)                                 | vpc_cni                            | 
-| CC         |            Environment             | Create Environment in CC                                                       | [confluent.tf](./infra/Terraform/confluent.tf)                             | staging                            |
-| CC         |           Kafka Cluster            | Create Kafka Cluster in CC                                                     | [confluent.tf](./infra/Terraform/confluent.tf)                             | cluster                            |
-| CC         |      Private Link Attachment       | Allow Connection between AWS & CC Environment                                  | [confluent.tf](./infra/Terraform/confluent.tf)                             | pla                                |
-| CC         | Private Link Attachment Connection | Connect CC Environment to AWS VPC Endpoint                                     | [confluent.tf](./infra/Terraform/confluent.tf)                             | plac                               |
-| CC         |          Service Account           | Service Account to Manage CC Kafka Cluster                                     | [confluent.tf](./infra/Terraform/confluent.tf)                             | app-manager                        |
-| CC         |            Role Binding            | Bind Admin Role to Service Account for CC Environment                          | [confluent.tf](./infra/Terraform/confluent.tf)                             | app-manager-kafka-cluster-admin    |
-| CC         |      Schema Registry Cluster       | Provision Schema Registry for Kafka Cluster                                    | [confluent.tf](./infra/Terraform/confluent.tf)                             | sr                                 |
-| CC         |              API Key               | API Key to Manage Schema Registry                                              | [confluent.tf](./infra/Terraform/confluent.tf)                             | schema-registry-api-key            |
-| CC         |             DNS Record             | Create URL for CC Env for AWS Private Link                                     | [confluent.tf](./infra/Terraform/confluent.tf)                             | main                               |
-| CC         |              Gateway               | Create Gateway to Connect CC Environment to AWS Region                         | [confluent.tf](./infra/Terraform/confluent.tf)                             | confluent_rds_gateway              |
-| CC         |            Access Point            | Create Access Point to Connect CC Environment to RDS                           | [confluent.tf](./infra/Terraform/confluent.tf)                             | confluent_oracle_db_access_point   |
-| CC         |         Flink Compute Pool         | Create A Flink Compute Pool for CC Environment                                 | [flink.tf](./infra/Terraform/flink.tf)                                     | flink_pool                         |
-| CC         |            Flink Rgion             | Create Flink Region in AWS for flink cluster                                   | [flink.tf](./infra/Terraform/flink.tf)                                     | flink_region                       |
-| Local      |            Kube Config             | Update local kubeconfig file with newly provisioned Kubernetes Cluster Details | [kubernetes_setup.tf](./infra/Terraform/kubernetes_setup.tf)               | kube_config                        | 
-| Kubernetes |             Config Map             | Create Config Map for Deployment Configs/Secrets                               | [kubernetes_setup.tf](./infra/Terraform/kubernetes_setup.tf)               | fraud_demo_config                  | 
-| Kubernetes |             Deployment             | Create Deployment to run UI                                                    | [kubernetes_setup.tf](./infra/Terraform/kubernetes_setup.tf)               | fraud_demo                         | 
-| Kubernetes |              Service               | Create Service to connect Deployment to Web                                    | [kubernetes_setup.tf](./infra/Terraform/kubernetes_setup.tf)               | ui                                 | 
-
-
-
-Run the following command from the same directory as the `README.md` file.
-
-   ```bash
-   terraform -chdir=infra/Terraform init
-   ```
-
-   **Expected Output:**
-   ```text 
-   Terraform has been successfully initialized!
-   ```
 </details>
 
 <details>
@@ -248,7 +171,14 @@ The following steps will set up, connect, and synchronize the specified resource
 
 
 #### Provisioning the Infrastructure
-Run the following bash command from the directory containing the README.md file. This will start provisioning most of the demos required infrastructure.
+
+Run the following command from the same directory as the `README.md` file.
+
+   ```bash
+   terraform -chdir=infra/Terraform init
+   ```
+
+In the same directory run the same command. This will start provisioning most of the demos required infrastructure.
 
 **Note:** This step is API intensive and may take 20-30 minutes.
 

@@ -81,13 +81,14 @@ resource "aws_security_group" "db_sg" {
 }
 
 output "oracle_db_details" {
+  sensitive = true
   value = {
     hostname = aws_db_instance.oracle_db.address
     dbname   = aws_db_instance.oracle_db.db_name
     username = aws_db_instance.oracle_db.username
-    password = nonsensitive(aws_db_instance.oracle_db.password)
+    password = aws_db_instance.oracle_db.password
     port = aws_db_instance.oracle_db.port
-    connection_string =  nonsensitive("${aws_db_instance.oracle_db.endpoint}/${aws_db_instance.oracle_db.db_name}")
+    connection_string = "${aws_db_instance.oracle_db.endpoint}/${aws_db_instance.oracle_db.db_name}"
   }
 }
 

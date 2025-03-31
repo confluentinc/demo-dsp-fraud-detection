@@ -1,5 +1,5 @@
 resource "aws_iam_role" "node" {
-  name = "eks-auto-node-example"
+  name = "eks-auto-node-example-${random_id.env_display_id.hex}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -25,7 +25,7 @@ resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryPullOn
 }
 
 resource "aws_iam_role" "cluster" {
-  name = "eks-cluster-example"
+  name = "eks-cluster-example-${random_id.env_display_id.hex}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
