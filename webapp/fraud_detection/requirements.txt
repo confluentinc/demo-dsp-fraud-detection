@@ -1,4 +1,4 @@
-django==5.1.7
+django==5.1.8
 faker==33.3.1
 gunicorn==23.0.0
 oracledb==2.5.1
