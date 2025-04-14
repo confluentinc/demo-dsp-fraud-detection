@@ -52,26 +52,57 @@ variable "vpc_cidr" {
 variable "oracle_db_name" {
   description = "Oracle DB Name"
   type        = string
-  default     = "DEMODB"
+  default     = "XE"
 }
 
 variable "oracle_db_username" {
   description = "Oracle DB Username"
   type        = string
-  default     = "thebestusername"
+  default     = "sample"
 }
 
 variable "oracle_db_password" {
   description = "Oracle DB Password"
   type        = string
   sensitive   = true
-  default     = "thebestpasswordever!"
+  default     = "password"
 }
 
 variable "oracle_db_port" {
   description = "Oracle DB Port"
   type        = number
   default     = 1521
+}
+
+variable "oracle_pdb_name" {
+  description = "Oracle DB Name"
+  type        = string
+  default     = "XEPDB1"
+}
+
+variable "oracle_xstream_user_username" {
+  description = "Oracle DB Username"
+  type        = string
+  default     = "c##cfltuser"
+}
+
+variable "oracle_xstream_user_password" {
+  description = "Oracle DB Password"
+  type        = string
+  sensitive   = true
+  default     = "password"
+}
+
+variable "oracle_db_table_include_list" {
+  description = "Oracle tables include list for Oracle Xstream connector to stream"
+  type        = string
+  default     = "SAMPLE[.](USER_TRANSACTION|AUTH_USER)"
+}
+
+variable "oracle_xtream_outbound_server_name" {
+  description = "Oracle Xstream outbound server name"
+  type        = string
+  default     = "XOUT"
 }
 
 ############# OpenSearch Variables

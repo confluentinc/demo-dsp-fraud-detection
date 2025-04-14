@@ -88,14 +88,8 @@ resource "aws_lb_target_group" "rds_oracle_target_group" {
 }
 
 # Target Group Attachment for the RDS instance
-resource "aws_lb_target_group_attachment" "rds_oracle_target_group_attachment" {
+resource "aws_lb_target_group_attachment" "oracle_xstream_db_target_group_attachment" {
   target_group_arn = aws_lb_target_group.rds_oracle_target_group.arn
-  target_id        = join(",", data.dns_a_record_set.rds_dynamic_ip.addrs) # aws_db_instance.oracle_db.id
+  target_id        = aws_instance.oracle_instance.private_ip
   port             = 1521
 }
-
-
-data "dns_a_record_set" "rds_dynamic_ip" {
-  host = aws_db_instance.oracle_db.address
-}
-

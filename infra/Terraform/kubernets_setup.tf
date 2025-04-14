@@ -28,16 +28,16 @@ resource "kubernetes_config_map" "fraud_demo_config" {
   }
 
   data = {
-    DB_NAME   = var.oracle_db_name
+    DB_NAME   = var.oracle_pdb_name
     DB_USER   = var.oracle_db_username
-    DB_HOST   = aws_db_instance.oracle_db.address #
+    DB_HOST   = aws_instance.oracle_instance.private_ip
     DB_PORT   = "${var.oracle_db_port}"
     DB_PASSWORD = var.oracle_db_password
     ADMIN_USER_USERNAME = "admin"
     ADMIN_USER_EMAIL = "admin@admin.com"
     ADMIN_USER_PASSWORD = "admin"
   }
-  depends_on = [aws_db_instance.oracle_db, aws_eks_cluster.eks_cluster, aws_eks_access_policy_association.caller_cluster_admin_policy]
+  depends_on = [aws_instance.oracle_instance, aws_eks_cluster.eks_cluster, aws_eks_access_policy_association.caller_cluster_admin_policy]
 }
 
 resource "kubernetes_deployment" "fraud_demo" {
@@ -196,7 +196,7 @@ resource "kubernetes_deployment" "fraud_demo" {
     }
   }
 
-  depends_on = [aws_eks_access_policy_association.caller_cluster_admin_policy, aws_db_instance.oracle_db]
+  depends_on = [aws_eks_access_policy_association.caller_cluster_admin_policy, aws_instance.oracle_instance]
 }
 
 resource "kubernetes_service" "fraud_demo_service" {

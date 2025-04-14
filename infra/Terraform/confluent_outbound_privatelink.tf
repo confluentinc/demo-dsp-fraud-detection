@@ -1,16 +1,16 @@
-resource "confluent_dns_record" "main" {
-  display_name = "dns_record"
-  environment {
-    id = confluent_environment.staging.id
-  }
-  domain = "${var.region}.rds.amazonaws.com"
-  gateway {
-    id = confluent_gateway.confluent_rds_gateway.id
-  }
-  private_link_access_point {
-    id = confluent_access_point.confluent_oracle_db_access_point.id
-  }
-}
+# resource "confluent_dns_record" "main" {
+#   display_name = "dns_record"
+#   environment {
+#     id = confluent_environment.staging.id
+#   }
+#   domain = "${var.region}.rds.amazonaws.com"
+#   gateway {
+#     id = confluent_gateway.confluent_rds_gateway.id
+#   }
+#   private_link_access_point {
+#     id = confluent_access_point.confluent_oracle_db_access_point.id
+#   }
+# }
 
 resource "confluent_gateway" "confluent_rds_gateway" {
   display_name = "${var.prefix}-gateway-${random_id.env_display_id.hex}"
