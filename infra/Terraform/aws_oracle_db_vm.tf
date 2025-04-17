@@ -287,7 +287,7 @@ output "oracle_vm_db_details" {
 
 output "oracle_xstream_connector" {
   value = {
-    database_hostname = aws_instance.oracle_instance.private_ip
+    database_hostname = confluent_access_point.confluent_oracle_db_access_point.aws_egress_private_link_endpoint[0].vpc_endpoint_dns_name
     database_port = var.oracle_db_port
     database_username = var.oracle_xstream_user_username
     database_password = nonsensitive(var.oracle_xstream_user_password)
