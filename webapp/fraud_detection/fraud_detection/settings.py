@@ -29,6 +29,9 @@ ORCLE_DB = {
     'NAME': f"{os.getenv("DB_HOST", '')}:{os.getenv("DB_PORT", '')}/{os.getenv('DB_NAME', '')}",
     'USER': os.getenv('DB_USER', ''),
     'PASSWORD': os.getenv('DB_PASSWORD', ''),
+    'OPTIONS': {
+        'options': '-c search_path=sample,system',
+    },
 }
 
 def get_default_db():

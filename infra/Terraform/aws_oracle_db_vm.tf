@@ -65,11 +65,10 @@ resource "aws_instance" "oracle_instance" {
 
   instance_type = "t3.large"
   key_name      = aws_key_pair.tf_key.key_name
-  subnet_id              = aws_subnet.public_subnets[0].id # Associate with the first public subnet - put this in private subnet?
+  subnet_id              = aws_subnet.private_subnets[0].id # Associate with the first public subnet - put this in private subnet?
 
 
   vpc_security_group_ids = [aws_security_group.allow_ssh_oracle.id]
-  security_groups = [aws_security_group.allow_ssh_oracle.id]
   root_block_device {
     volume_size = 30  # Oracle XE needs at least 12GB, adding extra space
     volume_type = "gp3"
@@ -80,20 +79,20 @@ resource "aws_instance" "oracle_instance" {
     #!/bin/bash
     # Update system
     dnf update -y
-
+    
     # Install Docker
     dnf install -y docker
     systemctl enable docker
     systemctl start docker
-
+    
     # Install Docker Compose
     curl -L "https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
-
+    
     # Create directory for Oracle data
     mkdir -p /opt/oracle/oradata
     chmod -R 777 /opt/oracle/oradata
-
+    
     # Create docker-compose.yml file
     cat > /opt/oracle/docker-compose.yml <<'DOCKER_COMPOSE'
     version: '3'
@@ -110,12 +109,12 @@ resource "aws_instance" "oracle_instance" {
         volumes:
           - /opt/oracle/oradata:/opt/oracle/oradata
         restart: always
-DOCKER_COMPOSE
-
+    DOCKER_COMPOSE
+    
     # Pull Oracle XE image and start container
     cd /opt/oracle
     docker-compose up -d
-
+    
     # Set up a welcome message
     echo "Oracle XE 21c setup complete. Connect using:"
     echo "Hostname: $(curl -s http://169.254.169.254/latest/meta-data/public-hostname)"
@@ -126,93 +125,178 @@ DOCKER_COMPOSE
     echo "Password: Welcome1"
     echo "EM Express URL: https://$(curl -s http://169.254.169.254/latest/meta-data/public-hostname):5500/em"
 
-sudo docker exec -it oracle-xe sqlplus sys/Welcome1@localhost:1521/XEPDB1 as sysdba
+    echo "Waiting for oracle-xe container to become healthy"
+    until [ "$(sudo docker inspect -f '{{.State.Health.Status}}' oracle-xe 2>/dev/null)" == "healthy" ]; do
+      echo -n "."
+      sleep 10
+    done
 
+    echo "Writing XStream setup script"
+    cat > /opt/oracle/setup-xstream.sh <<'SCRIPT_EOF'
+    #!/bin/bash
+    set -e
+    log() { echo "[XSTREAM] $1"; }
 
+    log "Enable Oracle XStream"
+    sudo docker exec -i oracle-xe bash -c "ORACLE_SID=XE; export ORACLE_SID; sqlplus /nolog" <<'SQL_EOF'
+    CONNECT sys/Welcome1 AS SYSDBA
+    ALTER SYSTEM SET enable_goldengate_replication=TRUE SCOPE=BOTH;
+    SHOW PARAMETER GOLDEN;
+    EXIT;
+    SQL_EOF
 
-# Oracle Setup
+    log "Configure ARCHIVELOG mode"
+    sudo docker exec -i oracle-xe bash -c "ORACLE_SID=XE; export ORACLE_SID; sqlplus /nolog" <<'SQL_EOF'
+    CONNECT sys/Welcome1 AS SYSDBA
+    SHUTDOWN IMMEDIATE;
+    STARTUP MOUNT;
+    ALTER DATABASE ARCHIVELOG;
+    ALTER DATABASE OPEN;
+    EXIT;
+    SQL_EOF
 
+    log "Configure supplemental logging"
+    sudo docker exec -i oracle-xe bash -c "ORACLE_SID=XE; export ORACLE_SID; sqlplus /nolog" <<'SQL_EOF'
+    CONNECT sys/Welcome1 AS SYSDBA
+    ALTER SESSION SET CONTAINER = CDB\$ROOT;
+    ALTER DATABASE ADD SUPPLEMENTAL LOG DATA (ALL) COLUMNS;
+    SELECT SUPPLEMENTAL_LOG_DATA_MIN, SUPPLEMENTAL_LOG_DATA_ALL FROM V\\$DATABASE;
+    EXIT;
+    SQL_EOF
 
-CREATE TABLESPACE xstream_adm_tbs DATAFILE '/opt/oracle/oradata/XE/xstream_adm_tbs.dbf' SIZE 25M REUSE AUTOEXTEND ON MAXSIZE UNLIMITED;
+    log "Create XStream tablespaces in CDB"
+    sudo docker exec -i oracle-xe bash -c "ORACLE_SID=XE; export ORACLE_SID; sqlplus /nolog" <<'SQL_EOF'
+    CONNECT sys/Welcome1 AS SYSDBA
+    CREATE TABLESPACE xstream_adm_tbs DATAFILE '/opt/oracle/oradata/XE/xstream_adm_tbs.dbf'
+    SIZE 25M REUSE AUTOEXTEND ON MAXSIZE UNLIMITED;
 
+    CREATE TABLESPACE xstream_tbs DATAFILE '/opt/oracle/oradata/XE/xstream_tbs.dbf'
+    SIZE 25M REUSE AUTOEXTEND ON MAXSIZE UNLIMITED;
+    EXIT;
+    SQL_EOF
 
-ALTER SESSION SET CONTAINER=XEPDB1;
+    log "Create PDB objects and sample user"
+    sudo docker exec -i oracle-xe bash -c "ORACLE_SID=XE; export ORACLE_SID; sqlplus /nolog" <<'SQL_EOF'
+    CONNECT sys/Welcome1 AS SYSDBA
+    ALTER SESSION SET CONTAINER=XEPDB1;
 
-CREATE TABLESPACE xstream_adm_tbs DATAFILE '/opt/oracle/oradata/XE/XEPDB1/xstream_adm_tbs_2.dbf' SIZE 25M REUSE AUTOEXTEND ON MAXSIZE UNLIMITED;
+    CREATE USER sample IDENTIFIED BY password;
+    GRANT CONNECT, RESOURCE TO sample;
+    ALTER USER sample QUOTA UNLIMITED ON USERS;
 
-ALTER SESSION SET CONTAINER=CDB$ROOT;
+    CREATE TABLESPACE xstream_adm_tbs DATAFILE '/opt/oracle/oradata/XE/XEPDB1/xstream_adm_tbs.dbf'
+    SIZE 25M REUSE AUTOEXTEND ON MAXSIZE UNLIMITED;
 
+    CREATE TABLESPACE xstream_tbs DATAFILE '/opt/oracle/oradata/XE/XEPDB1/xstream_tbs.dbf'
+    SIZE 25M REUSE AUTOEXTEND ON MAXSIZE UNLIMITED;
+    EXIT;
+    SQL_EOF
 
-CREATE USER c##cfltadmin IDENTIFIED BY Welcome1 DEFAULT TABLESPACE xstream_adm_tbs QUOTA UNLIMITED ON xstream_adm_tbs CONTAINER=ALL;
+    log "Create XStream admin user"
+    sudo docker exec -i oracle-xe bash -c "ORACLE_SID=XE; export ORACLE_SID; sqlplus /nolog" <<'SQL_EOF'
+    CONNECT sys/Welcome1 AS SYSDBA
+    CREATE USER c##cfltadmin IDENTIFIED BY password
+    DEFAULT TABLESPACE xstream_adm_tbs
+    QUOTA UNLIMITED ON xstream_adm_tbs
+    CONTAINER=ALL;
 
+    GRANT CREATE SESSION TO c##cfltadmin CONTAINER=ALL;
+    GRANT SET CONTAINER TO c##cfltadmin CONTAINER=ALL;
 
-GRANT CREATE SESSION, SET CONTAINER TO c##cfltadmin CONTAINER=ALL;
+    BEGIN
+      DBMS_XSTREAM_AUTH.GRANT_ADMIN_PRIVILEGE(
+        grantee                 => 'c##cfltadmin',
+        privilege_type          => 'CAPTURE',
+        grant_select_privileges => TRUE,
+        container               => 'ALL'
+      );
+    END;
+    /
+    EXIT;
+    SQL_EOF
 
+    log "Create XStream connect user"
+    sudo docker exec -i oracle-xe bash -c "ORACLE_SID=XE; export ORACLE_SID; sqlplus /nolog" <<'SQL_EOF'
+    CONNECT sys/Welcome1 AS SYSDBA
+    CREATE USER c##cfltuser IDENTIFIED BY password
+    DEFAULT TABLESPACE xstream_tbs
+    QUOTA UNLIMITED ON xstream_tbs
+    CONTAINER=ALL;
 
-BEGIN
-DBMS_XSTREAM_AUTH.GRANT_ADMIN_PRIVILEGE(grantee => 'c##cfltadmin', privilege_type => 'CAPTURE', grant_select_privileges => TRUE, container => 'ALL');
-END;
-/
+    GRANT CREATE SESSION TO c##cfltuser CONTAINER=ALL;
+    GRANT SET CONTAINER TO c##cfltuser CONTAINER=ALL;
+    GRANT SELECT_CATALOG_ROLE TO c##cfltuser CONTAINER=ALL;
+    GRANT CREATE TABLE, CREATE SEQUENCE, CREATE TRIGGER TO c##cfltuser CONTAINER=ALL;
+    GRANT FLASHBACK ANY TABLE, SELECT ANY TABLE, LOCK ANY TABLE TO c##cfltuser CONTAINER=ALL;
+    EXIT;
+    SQL_EOF
 
+    log "Create XStream Outbound Server"
+    sudo docker exec -i oracle-xe sqlplus c\#\#cfltadmin/password@//localhost:1521/XE <<'SQL_EOF'
+    DECLARE
+      tables  DBMS_UTILITY.UNCL_ARRAY;
+      schemas DBMS_UTILITY.UNCL_ARRAY;
+    BEGIN
+      tables(1) := NULL;
+      schemas(1) := 'sample';
+      DBMS_XSTREAM_ADM.CREATE_OUTBOUND(
+        server_name => 'xout',
+        source_container_name => 'XEPDB1',
+        table_names => tables,
+        schema_names => schemas);
+    END;
+    /
+    EXIT;
+    SQL_EOF
 
+    sudo docker exec -i oracle-xe bash -c "ORACLE_SID=XE; export ORACLE_SID; sqlplus /nolog" <<'SQL_EOF'
+    CONNECT sys/Welcome1 AS SYSDBA
+    BEGIN
+      DBMS_XSTREAM_ADM.ALTER_OUTBOUND(
+        server_name  => 'xout',
+        connect_user => 'c##cfltuser');
+    END;
+    /
+    EXIT;
+    SQL_EOF
 
-CREATE TABLESPACE xstream_tbs DATAFILE '/opt/oracle/oradata/XE/xstream_tbs.dbf' SIZE 25M REUSE AUTOEXTEND ON MAXSIZE UNLIMITED;
+    log "XStream configuration complete"
 
+    SCRIPT_EOF
 
-ALTER SESSION SET CONTAINER=XEPDB1;
+    chmod +x /opt/oracle/setup-xstream.sh
+    bash /opt/oracle/setup-xstream.sh >> /var/log/xstream-setup.log 2>&1
 
+    echo "Oracle XE with XStream configured." | tee -a /var/log/user-data.log
 
-CREATE TABLESPACE xstream_tbs DATAFILE '/opt/oracle/oradata/XE/XEPDB1/xstream_tbs.dbf' SIZE 25M REUSE AUTOEXTEND ON MAXSIZE UNLIMITED;
-
-ALTER SESSION SET CONTAINER=CDB$ROOT;
-
-
-CREATE USER c##cfltuser IDENTIFIED BY Welcome1 DEFAULT TABLESPACE xstream_tbs QUOTA UNLIMITED ON xstream_tbs CONTAINER=ALL;
-
-
-GRANT CREATE SESSION, SET CONTAINER TO c##cfltuser CONTAINER=ALL;
-
-GRANT SELECT_CATALOG_ROLE TO c##cfltuser CONTAINER=ALL;
-
-
-GRANT FLASHBACK ANY TABLE TO c##cfltuser CONTAINER=ALL;
-
-GRANT SELECT ANY TABLE TO c##cfltuser CONTAINER=ALL;
-
-GRANT LOCK ANY TABLE TO c##cfltuser CONTAINER=ALL;
-
-# Run this by logging to SQLPLUS using c##cfltadmin
-
-BEGIN
-  DBMS_XSTREAM_ADM.ALTER_OUTBOUND(
-    server_name    => 'xout',
-    table_names    => NULL,
-    schema_names   => 'sample',
-    add            => TRUE,
-    inclusion_rule => TRUE);
-END;
-/
-
-
-BEGIN
-  DBMS_XSTREAM_ADM.ALTER_OUTBOUND(
-     server_name  => 'xout',
-     connect_user => 'c##cfltuser');
-END;
-/
   EOF
   tags = {
     Name        = "${var.prefix}-oracle-xe"
-    Owner_email = "azamzam@confluent.io"
-    Event       = "Current2025"
   }
 }
 
 output "oracle_vm_db_details" {
   value = {
-    "public_dns": aws_instance.oracle_instance.public_dns
-    "connection_string": "sqlplus system/Welcome1@${aws_instance.oracle_instance.public_dns}:1521/XEPDB1"
-    "express_url": "https://${aws_instance.oracle_instance.public_dns}:5500/em"
-    "ssh": "ssh -i ${local_file.tf_key.filename} ${lookup(var.ssh_user, var.oracle_ami, "ec2-user")}@${aws_instance.oracle_instance.public_ip}"
+    "private_ip": aws_instance.oracle_instance.private_ip
+    "connection_string": "sqlplus system/Welcome1@${aws_instance.oracle_instance.private_ip}:1521/XEPDB1"
+    "express_url": "https://${aws_instance.oracle_instance.private_ip}:5500/em"
+    "ssh": "ssh -i ${local_file.tf_key.filename} ${lookup(var.ssh_user, var.oracle_ami, "ec2-user")}@${aws_instance.oracle_instance.private_ip}"
+  }
+}
+
+
+output "oracle_xstream_connector" {
+  value = {
+    database_hostname = aws_instance.oracle_instance.private_dns
+    database_port = var.oracle_db_port
+    database_username = var.oracle_xstream_user_username
+    database_password = nonsensitive(var.oracle_xstream_user_password)
+    database_name = var.oracle_db_name
+    database_service_name = var.oracle_db_name
+    pluggable_database_name = var.oracle_pdb_name
+    xstream_outbound_server = var.oracle_xtream_outbound_server_name
+    table_inclusion_regex = "SAMPLE[.](USER_TRANSACTION|AUTH_USER)"
+    topic_prefix = "fd"
+    decimal_handling_mode = "double"
   }
 }

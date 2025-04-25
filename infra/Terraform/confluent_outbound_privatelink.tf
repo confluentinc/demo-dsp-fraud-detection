@@ -3,7 +3,7 @@ resource "confluent_dns_record" "main" {
   environment {
     id = confluent_environment.staging.id
   }
-  domain = "${var.region}.rds.amazonaws.com"
+  domain = aws_instance.oracle_instance.private_dns
   gateway {
     id = confluent_gateway.confluent_rds_gateway.id
   }
