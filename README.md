@@ -381,30 +381,29 @@ This machine existing within the private network has already been setup by Terra
 <summary>Validate Flink has access to Oracle DB Connector Generated Events</summary>
 
 1. In the Flink SQL Query Text Card enter **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of [setting up the Oracle DB CDC connector](#setup-oracle-db-cdc-fully-managed-connector-v1).
-   ```oracle
-   SELECT * FROM `prefix.AUTH_USER`;
+   ```
+   SELECT  
+      COALESCE(`after`.`ID`) as ID,
+      `after`.`USERNAME` as USERNAME,
+      `after`.`EMAIL` as EMAIL,
+      `after`.`IS_ACTIVE` as IS_ACTIVE,
+      `after`.`DATE_JOINED` as DATE_JOINED
+   FROM `fd.SAMPLE.AUTH_USER`;
    ```
 2. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will populate.
 3. Click the `+` icon to the left of the Flink SQL Query Text Card to create a new SQL Query Text Card.
 4. In the new Flink SQL Query Text Card enter **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of [setting up the Oracle DB CDC connector](#setup-oracle-db-cdc-fully-managed-connector-v1).
-   ```oracle
-    SELECT * FROM `prefix.USER_TRANSACTION`;
+   ```
+   SELECT 
+      COALESCE(`after`.`ID`) as ID,
+      `after`.`AMOUNT` as AMOUNT,
+      `$rowtime`as RECEIVED_AT,
+      `after`.`IP_ADDRESS` as IP_ADDRESS,
+      `after`.`ACCOUNT_ID` as ACCOUNT_ID
+   FROM `fd.SAMPLE.USER_TRANSACTION`;
    ```
    ![user_transaction_flink_query.png](img/user_transaction_flink_query.png)
 5. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will populate.
-</details>
-
-<details>
-<summary>Update the User Transaction table watermark to allow Timestamp based operations </summary>
-
-1. Click `+` Icon to the left of the Flink SQL Query Text Card to create a new query card
-2. In the new Flink SQL Query Text Card enter **Note:** the environment and cluster name will change based on the terraform output vars; the prefix will change as well based on what you determined it to be.
-   ```oracle
-   ALTER TABLE `terraform_output_confluent_environment_name`.`terraform_output_confluent_cluster_name`.`prefix.USER_TRANSACTION` 
-       MODIFY WATERMARK FOR `RECEIVED_AT` AS `RECEIVED_AT`;
-   ```
-3. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will pop up
-![update_watermark_flink_query.png](img/update_watermark_flink_query.png)
 </details>
 
 <details>
@@ -418,45 +417,45 @@ This machine existing within the private network has already been setup by Terra
    **Note:** If you do not do this step correctly data generated will force you rename the `flagged-user-materializer` to `flagged-user<attempt#>-materializer` & the flagged_user table (in `CREATE TABLE`) to `flagged_user<attempt#>`
    
 
-   ```oracle
+   ```
    SET 'client.statement-name' = 'flagged-user-materializer';
-   CREATE TABLE flagged_user (
-     ACCOUNT_ID BIGINT, 
-     user_name STRING,
-     email STRING,
-     total_amount DOUBLE,
-     transaction_count BIGINT,
-     updated_at TIMESTAMP_LTZ(3),
-     PRIMARY KEY (ACCOUNT_ID) NOT ENFORCED
-   )
-   AS 
-   WITH transactions_per_customer_10m AS 
-   (
-     SELECT 
-       ACCOUNT_ID,
-       SUM(AMOUNT) OVER w AS total_amount,
-       COUNT(*) OVER w AS transaction_count,
-       RECEIVED_AT AS transaction_time
-     FROM `test.USER_TRANSACTION`
-     WINDOW w AS (
-       PARTITION BY ACCOUNT_ID
-       ORDER BY RECEIVED_AT
-       RANGE BETWEEN INTERVAL '10' MINUTE PRECEDING AND CURRENT ROW
-     )
-   ) 
-   SELECT 
-     COALESCE(ACCOUNT_ID, 0) AS ACCOUNT_ID,
-     u.USERNAME AS user_name,
-     u.EMAIL AS email,
-     transanactions.total_amount,
-     transanactions.transaction_count,
-     transanactions.transaction_time AS updated_at
-   FROM 
-     transactions_per_customer_10m AS transanactions
-   JOIN `test.AUTH_USER` AS u 
-     ON transanactions.ACCOUNT_ID = u.`key`
-   WHERE 
-     transanactions.total_amount > 1000 OR transanactions.transaction_count > 10;
+    CREATE TABLE flagged_user (
+      ACCOUNT_ID DOUBLE, 
+      user_name STRING,
+      email STRING,
+      total_amount DOUBLE,
+      transaction_count BIGINT,
+      updated_at TIMESTAMP_LTZ(3),
+      PRIMARY KEY (ACCOUNT_ID) NOT ENFORCED
+    )
+    AS 
+    WITH transactions_per_customer_10m AS 
+    (
+      SELECT 
+        `after`.`ACCOUNT_ID` AS ACCOUNT_ID,
+        SUM(`after`.`AMOUNT`) OVER w AS total_amount,
+        COUNT(*) OVER w AS transaction_count,
+        `$rowtime` AS transaction_time
+      FROM `fd.SAMPLE.USER_TRANSACTION`
+      WINDOW w AS (
+        PARTITION BY `after`.`ACCOUNT_ID`
+        ORDER BY `$rowtime`
+        RANGE BETWEEN INTERVAL '10' MINUTE PRECEDING AND CURRENT ROW
+      )
+    ) 
+    SELECT 
+      COALESCE(transactions.`ACCOUNT_ID`, 0) AS ACCOUNT_ID,
+      u.`after`.`USERNAME` AS user_name,
+      u.`after`.`EMAIL` AS email,
+      transactions.`total_amount`,
+      transactions.`transaction_count`,
+      transactions.`transaction_time` AS updated_at
+    FROM 
+      transactions_per_customer_10m AS transactions
+    JOIN `fd.SAMPLE.AUTH_USER` AS u 
+      ON transactions.ACCOUNT_ID = u.`after`.`ID`
+    WHERE 
+      transactions.total_amount > 1000 OR transactions.transaction_count > 10;
    ```
 3. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will pop up
 </details>
