@@ -135,8 +135,6 @@ All variables in the table below must be set in the [terraform.tfvars file](./in
 |:---------------------------|:------:|:--------------------------------------|---------:|
 | confluent_cloud_api_key    | string | [Key From CC](#create_cc_api_key)     |     True |
 | confluent_cloud_api_secret | string | [Secret From CC](#create_cc_api_key)  |     True |
-| aws_key                    | string | [Key From AWS](#create_cc_api_key)    |     True |
-| aws_secret                 | string | [Secret From AWS](#create_cc_api_key) |     True |
 
 
 ### Provision Infrastructure via Terraform
