@@ -33,8 +33,4 @@ provider "confluent" {
 
 provider "aws" {
   region = var.region
-  access_key = var.aws_key
-  secret_key = var.aws_secret
-  shared_credentials_files = null
-  shared_config_files = null
 }

@@ -1,5 +1,8 @@
 data "aws_region" "current" {}
-data "aws_caller_identity" "current" {}
+
+data "aws_availability_zones" "available" {
+  state = "available"
+}
 
 # ------------------------------------------------------
 # VPC
@@ -21,7 +24,7 @@ resource "aws_subnet" "public_subnets" {
     count = 3
     vpc_id = aws_vpc.main.id
     cidr_block = "10.0.${count.index+1}.0/24"
-    availability_zone       = var.availability_zones[count.index]
+    availability_zone       = data.aws_availability_zones.available.names[count.index]
     map_public_ip_on_launch = true
     tags = {
         Name = "${var.prefix}-public-${count.index}-${random_id.env_display_id.hex}"
@@ -46,7 +49,7 @@ resource "aws_subnet" "private_subnets" {
   count                   = 3
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.${count.index + 10}.0/24"
-  availability_zone       = var.availability_zones[count.index]
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = false
   tags = {
     Name = "${var.prefix}-private-${count.index}-${random_id.env_display_id.hex}"

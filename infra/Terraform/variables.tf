@@ -1,8 +1,8 @@
 ############### Global Variables
 variable "region" {
-  description = "The region of Confluent Cloud Network; If this is changed `availability_zones` variable must also be changed"
+  description = "The region of Confluent Cloud Network"
   type        = string
-  default     = "us-west-2"
+  default     = "us-east-1"
 }
 
 variable "prefix" {
@@ -23,25 +23,8 @@ variable "confluent_cloud_api_secret" {
   sensitive   = true
 }
 
-############### AWS Variables
-variable "aws_key" {
-  description = "AWS API Key (with Lmabda Invoke Permission)."
-  type        = string
-}
-
-variable "aws_secret" {
-  description = "AWS API Secret."
-  type        = string
-  sensitive   = true
-}
 
 ############### AWS Networking Variables
-variable "availability_zones" {
-  description = "List of availability zones to use for the private subnets"
-  type        = list(string)
-  default     = ["us-west-2a", "us-west-2b", "us-west-2c"]
-}
-
 variable "vpc_cidr" {
   description = "VPC Cidr to be created"
   type        = string
@@ -135,11 +118,4 @@ variable "windows_jump_server_password" {
   description = "Windows Jump server Admin Password"
   type        = string
   default     = "thatsAGoodPass"
-}
-
-
-variable "oracle_ami" {
-  description = "Oracle AMI"
-  type        = string
-  default     = "ami-027951e78de46a00e"
 }

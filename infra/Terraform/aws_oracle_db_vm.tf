@@ -55,14 +55,29 @@ resource "aws_security_group" "allow_ssh_oracle" {
   }
 }
 
+
+data "aws_ami" "oracle_ami" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+}
+
 # EC2 instance for Oracle
 # /var/log/cloud-init.log
 #/var/log/cloud-init-output.log
 # /var/lib/cloud/instances/i-0c42e1665ff8e11f2/user-data.txt
 # sudo cat /var/lib/cloud/instance/scripts/part-001
 resource "aws_instance" "oracle_instance" {
-  ami           = var.oracle_ami
-
+  ami = data.aws_ami.oracle_ami.id
   instance_type = "t3.large"
   key_name      = aws_key_pair.tf_key.key_name
   subnet_id              = aws_subnet.private_subnets[0].id # Associate with the first public subnet - put this in private subnet?
@@ -280,7 +295,6 @@ output "oracle_vm_db_details" {
     "private_ip": aws_instance.oracle_instance.private_ip
     "connection_string": "sqlplus system/Welcome1@${aws_instance.oracle_instance.private_ip}:1521/XEPDB1"
     "express_url": "https://${aws_instance.oracle_instance.private_ip}:5500/em"
-    "ssh": "ssh -i ${local_file.tf_key.filename} ${lookup(var.ssh_user, var.oracle_ami, "ec2-user")}@${aws_instance.oracle_instance.private_ip}"
   }
 }
 
