@@ -1,3 +1,5 @@
+
+
 resource "aws_iam_role" "node" {
   name = "eks-auto-node-example-${random_id.env_display_id.hex}"
   assume_role_policy = jsonencode({
@@ -68,11 +70,29 @@ resource "aws_iam_role_policy_attachment" "cluster_AmazonEKSNetworkingPolicy" {
   role       = aws_iam_role.cluster.name
 }
 
+data "aws_caller_identity" "current" {}
+
+locals {
+  caller_arn = data.aws_caller_identity.current.arn
+  caller_arn_parts = split(":", local.caller_arn)
+  
+  # Determine if this is an assumed role (contains "sts" and "assumed-role") or regular IAM user/role
+  is_assumed_role = local.caller_arn_parts[2] == "sts" && contains(split("/", local.caller_arn_parts[5]), "assumed-role")
+  
+  # For assumed roles, convert to IAM role ARN. For IAM users/roles, keep as is.
+  principal_arn = local.is_assumed_role ? (
+    # Convert assumed-role ARN to IAM role ARN
+    "arn:aws:iam::${local.caller_arn_parts[4]}:role/${split("/", local.caller_arn_parts[5])[1]}"
+  ) : (
+    # For IAM users/roles, keep the original ARN
+    local.caller_arn
+  )
+}
 
 resource "aws_eks_access_policy_association" "caller_admin_policy" {
   cluster_name  = aws_eks_cluster.eks_cluster.name
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy"
-  principal_arn = data.aws_caller_identity.current.arn
+  principal_arn = local.principal_arn
   access_scope {
     type = "cluster"
   }
@@ -81,7 +101,7 @@ resource "aws_eks_access_policy_association" "caller_admin_policy" {
 resource "aws_eks_access_policy_association" "caller_cluster_admin_policy" {
   cluster_name  = aws_eks_cluster.eks_cluster.name
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = data.aws_caller_identity.current.arn
+  principal_arn = local.principal_arn
   access_scope {
     type = "cluster"
   }
