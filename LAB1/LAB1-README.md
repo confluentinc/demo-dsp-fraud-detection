@@ -1,5 +1,5 @@
 # Lab 1
-In this lab, we will set up the Oracle XStream CDC Fully Managed Source Connector V1 and validate it by simulating transactions into a Web UI connected to the Oracle database.
+In this lab, we will set up the Oracle XStream CDC Fully Managed Source Connector and validate it by simulating transactions into a Web UI connected to the Oracle database.
 ![Architecture](./assets/lab1_architecture_connector.png)
 
 ---
@@ -95,38 +95,36 @@ Now that all the Infrastructure is provisioned and the database connector is pro
 ## Set Up Redshift Fully Managed Sink Connector 
 Lastly for this lab, we will send the topics to Redshift via the Redshift fully managed Sink Connector. Follow the same steps as setting up the Oracle XStream Source Connector but as a Sink. 
 
-### Create Redshift Sink Managed Connector V1
+### Create Redshift Sink Managed Connector
 
 1. Type `redshift sink` in the `search` text field
 2. Select the `Redshift Sink` tile (it will be the only tile)![redshift_connector.png](./assets/redshiftconnector.png)
-3. Select `flagged_user` checkbox in the Topics table ![redshift_topic.png](./assets/redshift_topic.png)
+3. Select `fd.SAMPLE.AUTH_USER` and `fd.SAMPLE.USER_TRANSACTION`checkboxes in the Topics table 
 4. Click the `Continue` button in the bottom right
 5. Generate Connector API Key
    1. Select the `My account`tile 
-   2. Click the `Generate API key and download` button **Note:** If you too many existing API keys this will fail; remove any unused keys if this occurs 
-   3. Click the `Continue` button **Note:** These API keys dont need to be recorded & will automatically be assigned to the cluster
+   2. Click the `Use an existing API key` button and paste in your API keys and secrets that you created earlier when creating the Oracle XStream CDC Source Connector. 
+   3. Click the `Continue` button 
 6. Configure Connector Authentication settings ![redshift_auth_settings.png](./assets/redshift_auth_settings.png) 
-   1. Enter `redshift_endpoint` Terraform output into `Redshift Instance URL` textbox 
-   2. Select `BASIC` on the `Endpoint Authentication Type` dropdown
-   3. Enter `redshift_username` Terraform output into `Auth Username` textbox
-   4. Enter `redshift_password` Terraform output into `Auth Password` textbox
-   5. Select `false` on the `SSL_Enabled` dropdown
-   6. Click the `Continue` button
+   1. Enter `redshift_endpoint` Terraform output into `AWS Redshift domain` 
+   2. Enter `5439` into `AWS Redshift Port` 
+   3. Enter `admin` into `Connection user` 
+   4. Enter `Admin123456!` into `Connection password`
+   5. Enter `frauddetection` into `Database name`
+   6. Select `false` on the `SSL_Enabled` dropdown
+   7. Click the `Continue` button
 7. Configure Connector Topic & Index settings
    1. Select `AVRO` option in the `Input Kafka record value format` horizontal selection
    2. Select `1` in `Number of indexes` select dropdown
-   3. Enter `flagged_user` in only `index` textbox
-   4. Enter `flagged_user` in only `topic` textbox **Note:** This should be the name of the table you [created with the flink detection sql query](#create-real-time-flink-processing-to-identify-fraudulent-events)
-   5. Select `IGNORE` in the `Behavior for null valued records` dropdown
-   6. Select `1` in the `Batch size` dropdown
-   7. Click the `Continue` button
+   3. Select `False` in `Enable Connector Auto-Restart`
+   4. Select `1` in the `Batch size` dropdown
+   5. Click the `Continue` button
 8. Click the `Continue` button on the next page
-9. Click the `Continue` button on the next page
-10. You will now be on the Connectors UI page seeing a tile that is provisioning the Redshift Connector
-11. Wait for the Connector to initialize; it will take ~5 minutes and you may have to refresh the page
+9. You will now be on the Connectors UI page seeing a tile that is provisioning the Redshift Connector
+10. Wait for the Connector to initialize; it will take ~5 minutes and you may have to refresh the page
 
 ### View Topic Data in Redshift
-Validate that the topics are successfully sent to Redshift.
+Validate in Redshift that the topics are successfully sent.
 
 ---
 
