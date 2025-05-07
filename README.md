@@ -59,7 +59,7 @@ AWS API keys will be provisioned and provided to users on the day of the worksho
 Confluent Cloud `Cloud resource management` API keys are required to provision the necessary Confluent Cloud infrastructure.
 </summary><details>
 
-1. Log into Confluent
+1. Log into Confluent Cloud
 2. Open the sidebar menu and select `API keys`
 3. Click `+ Add API key`
 4. Associate API Key with `My account`
@@ -134,17 +134,12 @@ This machine existing within the AWS private network has already been setup by T
 8. Click the `Add` button in the bottom right of the instance pop up
 9. Click the newly created pop up titled with the `windows_instance_ip`
 10. You will be redirected to a Windows OS for the machine located the AWS Oracle DB network
-
-
-**Note:** Minimize the window to the Internal Windows Machine it will be used later (you can always connect again if you already closed it)
-
-
 ---
 ## Labs
 
 There are two labs to demonstrate two different use cases with Confluent Cloud. 
-1. [Lab 1](./LAB1/LAB1-README.md) shows the path to migration from legacy systems like Oracle to modern data warehouses like Redshift.
-2. [Lab 2](./LAB2/LAB2-README.md) showcases developing stream processing applications like filters, aggregations and joins in real-time with Flink and proceeding to send the newly enriched data into dashboards or other analytics applications. 
+1. [Lab 1](./LAB1/LAB1-README.md) shows the path to migration from legacy systems like Oracle to modern data warehouses like Redshift by leveraging Confluent Cloud fully managed connectors. User authentication and transaction events will be streamed from a Fraud Detection website. 
+2. [Lab 2](./LAB2/LAB2-README.md) showcases developing stream processing applications like filters, aggregations and joins in real-time with Flink and sending the newly enriched fraud data into OpenSearch dashboards or other analytics applications. 
 
 ---
 ## Clean-up
@@ -159,7 +154,6 @@ confluent connect cluster delete <CONNECTOR_ID> --cluster <CLUSTER_ID> --environ
 To destroy all the resources created run the command below from the ```terraform``` directory:
 
 ```
-chmod +x ./demo-destroy.sh
-./demo-destroy.sh
+terraform -chdir=infra/Terraform destroy --auto-approve
 ```
 
