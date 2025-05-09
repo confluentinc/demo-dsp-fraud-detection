@@ -31,14 +31,21 @@ Real-Time fraud detection is achieved by adding a few more components:
 ### Install Supporting Software
 In this section we will install and validate all required software for the demo with the following command
 
-1. Run the command to install AWS CLI using Homebrew:
-   ```bash
-   brew install awscli
-   brew tap hashicorp/tap
-   brew install hashicorp/tap/terraform
-   brew install confluentinc/tap/cli
-   brew install kubectl
-   ```
+1. Follow the steps below to install required software:
+   - **macOS** users will install everything from a terminal using Homebrew:
+      ```bash
+      brew install awscli
+      brew tap hashicorp/tap
+      brew install hashicorp/tap/terraform
+      brew install confluentinc/tap/cli
+      brew install kubectl
+      ```
+
+   - **Windows** users will follow the installation instructions below:
+      - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+      - [Terraform](https://developer.hashicorp.com/terraform/install#windows)
+      - [Confluent CLI](https://docs.confluent.io/confluent-cli/current/install.html)
+      - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/)
 
 
 2. Verify the installation with the following command
@@ -69,7 +76,9 @@ Confluent Cloud `Cloud resource management` API keys are required to provision t
 
 ### Install Windows Jump Server 
 
-A Jump server on the internal network is required to connect to the Oracle DB that will be on a private internal network; the following software will allow you to connect to this jump server. Download this application called `Windows App` for your specific OS. 
+A Jump server on the internal network is required to connect to the Oracle DB that will be on a private internal network; the following software will allow you to connect to this jump server. Download this application called `Windows App` if you are on macOS.
+
+If you are on Windows, it normally comes with preinstalled Remote Desktop Connection software. If for some reason it is missing, follow [these steps](https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/remotepc/uninstall-remote-desktop-connection?tabs=gui#reinstall-remote-desktop-connection) to re-enable it.
 
 ---
 
@@ -85,10 +94,11 @@ Terraform is configured via a terraform.tfvars file that users will create manua
 
 All variables in the table below must be set in the terraform.tfvars file in order for Terraform to provision the infrastructure.
 
-| Key Name                   |  Type  | Description                           | Required |
-|:---------------------------|:------:|:--------------------------------------|---------:|
-| confluent_cloud_api_key    | string | [Key From CC](#create_cc_api_key)     |     True |
-| confluent_cloud_api_secret | string | [Secret From CC](#create_cc_api_key)  |     True |
+| Key Name                   |  Type  | Description                           | Required     |
+|:---------------------------|:------:|:--------------------------------------|-------------:|
+| confluent_cloud_api_key    | string | [Key From CC](#create_cc_api_key)     |         True |
+| confluent_cloud_api_secret | string | [Secret From CC](#create_cc_api_key)  |         True |
+| reject_connections_script  | string | reject_connections.bat                | Windows only |
 
 
 ### Provision Infrastructure via Terraform
@@ -134,6 +144,9 @@ This machine existing within the AWS private network has already been setup by T
 8. Click the `Add` button in the bottom right of the instance pop up
 9. Click the newly created pop up titled with the `windows_instance_ip`
 10. You will be redirected to a Windows OS for the machine located the AWS Oracle DB network
+
+> [!NOTE]
+> On Windows use Remote Desktop Connection and follow the prompts.
 ---
 ## Labs
 

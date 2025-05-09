@@ -129,7 +129,7 @@ These events are protected and only available within the private network; theref
 ## Set Up OpenSearch Sink Connector
 We will now stream the real-time fraud Kafka events generated through the Flink query to a dashboard for the fraud team's analysis.
 
-### Navigate to the Confluent Cluster Connector View</
+### Navigate to the Confluent Cluster Connector View
 
 1. Log into [Confluent Cloud](https://confluent.cloud/login)
 2. Select `Environments`
@@ -173,14 +173,14 @@ We will now stream the real-time fraud Kafka events generated through the Flink 
 
 ### Log into OpenSearch Dashboard
 
-1. Go to URL from the Terraform output `opensearch_dashbaord_url`
+1. Go to URL from the Terraform output `opensearch_dashboard_url`
 2. Log into Opensearch using the Terraform outputs `opensearch_password` & `opensearch_username`
 3. Click out of any modal pop-ups
 
 ### Create Dashboard for Flagged users
 
 1. Select the side menu from the 3 horizontal lines icon in the top right
-2. Select `Dashbaord Management` > `Dashboard Managment` **Note:** If this is not available in the menu create a empty dashboard and try again.
+2. Select `Dashboard Management` > `Dashboard Managment` **Note:** If this is not available in the menu create a empty dashboard and try again.
 3. Click `Saved Objects` menu option on the vertical menu on the right
 4. Select `Import` on the top right
 5. Select `Import` and select the `fraud_dashboard.ndjson` [filepath](/dashboards/fraud_dashboard.ndjson) 

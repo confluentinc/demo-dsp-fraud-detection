@@ -15,16 +15,7 @@ resource "null_resource" "reject_connections" {
   }
 
   provisioner "local-exec" {
-    command = <<EOT
-      VPC_ENDPOINTS=$(aws ec2 describe-vpc-endpoint-connections --service-id ${aws_vpc_endpoint_service.rds_endpoint_service.id} \
-      --query 'VpcEndpointConnections[*].VpcEndpointId' --output text)
-
-      if [ ! -z "$VPC_ENDPOINTS" ]; then
-        aws ec2 reject-vpc-endpoint-connections --service-id ${aws_vpc_endpoint_service.rds_endpoint_service.id} --vpc-endpoint-ids $VPC_ENDPOINTS
-      else
-        echo "No VPC Endpoints to reject"
-      fi
-    EOT
+    command = "${var.reject_connections_script} ${aws_vpc_endpoint_service.rds_endpoint_service.id}"
   }
 
   lifecycle {

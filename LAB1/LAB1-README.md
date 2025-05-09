@@ -111,13 +111,12 @@ Lastly for this lab, we will send the topics to Redshift via the Redshift fully 
    3. Enter `admin` into `Connection user` 
    4. Enter `Admin123456!` into `Connection password`
    5. Enter `frauddetection` into `Database name`
-   6. Select `false` on the `SSL_Enabled` dropdown
-   7. Click the `Continue` button
+   6. Click the `Continue` button
 7. Configure Connector Topic & Index settings
    1. Select `AVRO` option in the `Input Kafka record value format` horizontal selection
-   2. Select `1` in `Number of indexes` select dropdown
+   2. Select `True` in `Auto create table` select dropdown
    3. Select `False` in `Enable Connector Auto-Restart`
-   4. Select `1` in the `Batch size` dropdown
+   4. Enter `1` into `Batch size`
    5. Click the `Continue` button
 8. Click the `Continue` button on the next page
 9. You will now be on the Connectors UI page seeing a tile that is provisioning the Redshift Connector

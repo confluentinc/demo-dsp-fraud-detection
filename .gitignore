@@ -2,3 +2,4 @@
 /infra/Terraform/*.pem
 /webapp/fraud_detection/db.sqlite3
 /webapp/local.env
+.DS_Store
