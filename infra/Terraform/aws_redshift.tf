@@ -50,6 +50,58 @@ resource "aws_redshift_cluster" "redshift_cluster" {
   }
 }
 
+resource "aws_redshiftdata_statement" "create_schema" {
+  cluster_identifier = aws_redshift_cluster.redshift_cluster.cluster_identifier
+  database           = aws_redshift_cluster.redshift_cluster.database_name
+  db_user            = aws_redshift_cluster.redshift_cluster.master_username
+  sql                = "create schema sample authorization ${aws_redshift_cluster.redshift_cluster.master_username};"
+}
+
+resource "aws_redshiftdata_statement" "grant_usage_schema" {
+  cluster_identifier = aws_redshift_cluster.redshift_cluster.cluster_identifier
+  database           = aws_redshift_cluster.redshift_cluster.database_name
+  db_user            = aws_redshift_cluster.redshift_cluster.master_username
+  sql                = "GRANT USAGE ON SCHEMA sample TO ${aws_redshift_cluster.redshift_cluster.master_username};"
+
+  depends_on = [aws_redshiftdata_statement.create_schema]
+}
+
+resource "aws_redshiftdata_statement" "grant_create_schema" {
+  cluster_identifier = aws_redshift_cluster.redshift_cluster.cluster_identifier
+  database           = aws_redshift_cluster.redshift_cluster.database_name
+  db_user            = aws_redshift_cluster.redshift_cluster.master_username
+  sql                = "GRANT CREATE ON SCHEMA sample TO ${aws_redshift_cluster.redshift_cluster.master_username};"
+
+  depends_on = [aws_redshiftdata_statement.grant_usage_schema]
+}
+
+resource "aws_redshiftdata_statement" "grant_select_schema" {
+  cluster_identifier = aws_redshift_cluster.redshift_cluster.cluster_identifier
+  database           = aws_redshift_cluster.redshift_cluster.database_name
+  db_user            = aws_redshift_cluster.redshift_cluster.master_username
+  sql                = "GRANT SELECT ON ALL TABLES IN SCHEMA sample TO ${aws_redshift_cluster.redshift_cluster.master_username};"
+
+  depends_on = [aws_redshiftdata_statement.grant_create_schema]
+}
+
+resource "aws_redshiftdata_statement" "grant_all_schema" {
+  cluster_identifier = aws_redshift_cluster.redshift_cluster.cluster_identifier
+  database           = aws_redshift_cluster.redshift_cluster.database_name
+  db_user            = aws_redshift_cluster.redshift_cluster.master_username
+  sql                = "GRANT ALL ON SCHEMA sample TO ${aws_redshift_cluster.redshift_cluster.master_username};"
+
+  depends_on = [aws_redshiftdata_statement.grant_select_schema]
+}
+
+resource "aws_redshiftdata_statement" "grant_create_database" {
+  cluster_identifier = aws_redshift_cluster.redshift_cluster.cluster_identifier
+  database           = aws_redshift_cluster.redshift_cluster.database_name
+  db_user            = aws_redshift_cluster.redshift_cluster.master_username
+  sql                = "GRANT CREATE ON DATABASE ${aws_redshift_cluster.redshift_cluster.database_name} TO ${aws_redshift_cluster.redshift_cluster.master_username};"
+
+  depends_on = [aws_redshiftdata_statement.grant_all_schema]
+}
+
 # Output the Redshift cluster endpoint
 output "redshift_endpoint" {
   value = aws_redshift_cluster.redshift_cluster.endpoint
