@@ -15,7 +15,7 @@ In this lab, we will proceed to establish real-time stream processing of Kafka T
 
 ## Write Flink Compute Queries for Real-Time Stream Processing
 
-### Navigate to Flink Via Internal Windows Machine</
+### Navigate to Flink Via Internal Windows Machine
 These events are protected and only available within the private network; therefore, we will need to access the events from the internal windows jump server. 
 
 1. Reopen the Windows Jump Server; this is the server setup in the [access the internal Windows machine section](#access-the-internal-windows-machine)
