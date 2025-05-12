@@ -1,6 +1,6 @@
 # Lab 1
-In this lab, we will set up the Oracle XStream CDC Fully Managed Source Connector and validate it by simulating transactions into a Web UI connected to the Oracle database.
-![Architecture](./assets/lab1_architecture_connector.png)
+In this lab, we will set up and validate the Oracle XStream CDC Fully Managed Source Connector by simulating transactions into a Web UI connected to the Oracle database.
+
 
 ---
 
@@ -82,12 +82,15 @@ Now that all the Infrastructure is provisioned and the database connector is pro
 
 ### Validate Transactions are Streamed to Topic via Connector
 
-1. Log into [Confluent Cloud](https://confluent.cloud/login)
-2. Select `Environments`
-3. Select the environment named after the `confluent_environment_name` output from Terraform
-4. Select the cluster named after the `confluent_cluster_name` output from Terraform
-5. Select `Topics` in the Cluster sidebar menu on the left
-6. Examine the `Topic name` table column; the prefix.AUTH_USER & prefix.USER_TRANSACTION will exist. **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of setting up the Oracle XStream CDC connector.
+These events from the Web UI are protected and only available within a private network; therefore, we will need to access the events from the internal windows jump server that we spun up in the prerequisite. 
+
+1. Reopen the Windows Jump Server
+2. From there, log into [Confluent Cloud](https://confluent.cloud/login)
+3. Select `Environments`
+4. Select the environment named after the `confluent_environment_name` output from Terraform
+5. Select the cluster named after the `confluent_cluster_name` output from Terraform
+6. Select `Topics` in the Cluster sidebar menu on the left
+7. Examine the `Topic name` table column; the prefix.AUTH_USER & prefix.USER_TRANSACTION topics will exist. **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of setting up the Oracle XStream CDC connector.
 
 
 ---
@@ -113,7 +116,7 @@ Lastly for this lab, we will send the topics to Redshift via the Redshift fully 
    5. Enter `frauddetection` into `Database name`
    6. Click the `Continue` button
 7. Configure Connector Topic & Index settings
-   1. Select `AVRO` option in the `Input Kafka record value format` horizontal selection
+   1. Select `JSON_SR` option in the `Input Kafka record value format` horizontal selection
    2. Select `True` in `Auto create table` select dropdown
    3. Select `False` in `Enable Connector Auto-Restart`
    4. Enter `1` into `Batch size`
@@ -127,4 +130,4 @@ Validate in Redshift that the topics are successfully sent.
 
 ---
 
-To setup the Flink Compute Queries for Real-Time Stream Processing, follow the steps in [Lab 2](../LAB2/LAB2-README.md). 
+After Lab 1 is completed, follow the steps in [Lab 2](../LAB2/LAB2-README.md) to setup the Flink Compute Queries for Real-Time Stream Processing. 
