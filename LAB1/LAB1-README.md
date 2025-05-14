@@ -1,6 +1,6 @@
 # Lab 1
-In this lab, we will set up the Oracle XStream CDC Fully Managed Source Connector and validate it by simulating transactions into a Web UI connected to the Oracle database.
-![Architecture](./assets/lab1_architecture_connector.png)
+In this lab, we will set up and validate the Oracle XStream CDC Fully Managed Source Connector by simulating transactions into a Web UI connected to the Oracle database.
+
 
 ---
 
@@ -82,16 +82,122 @@ Now that all the Infrastructure is provisioned and the database connector is pro
 
 ### Validate Transactions are Streamed to Topic via Connector
 
-1. Log into [Confluent Cloud](https://confluent.cloud/login)
-2. Select `Environments`
-3. Select the environment named after the `confluent_environment_name` output from Terraform
-4. Select the cluster named after the `confluent_cluster_name` output from Terraform
-5. Select `Topics` in the Cluster sidebar menu on the left
-6. Examine the `Topic name` table column; the prefix.AUTH_USER & prefix.USER_TRANSACTION will exist. **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of setting up the Oracle XStream CDC connector.
+These events from the Web UI are protected and only available within a private network; therefore, we will need to access the events from the internal windows jump server that we spun up in the prerequisite. 
+
+1. Reopen the Windows Jump Server
+2. From there, log into [Confluent Cloud](https://confluent.cloud/login)
+3. Select `Environments`
+4. Select the environment named after the `confluent_environment_name` output from Terraform
+5. Select the cluster named after the `confluent_cluster_name` output from Terraform
+6. Select `Topics` in the Cluster sidebar menu on the left
+7. Examine the `Topic name` table column; the `prefix.AUTH_USER` & `prefix.USER_TRANSACTION` topics will exist. **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of setting up the Oracle XStream CDC connector.
 
 
 ---
+## Convert Topics to be Compatible With Redshift Connector
 
+Now that we have verified the topics are successfully sent to our Kafka topics, we will now send the events to Redshift via the Redshift Fully Managed Sink Connector. However, the Redshift connector by default cannot process Kafka topics that have nested JSON data as seen in our `prefix.AUTH_USER` & `prefix.USER_TRANSACTION` topics. The Oracle XStream Connector creates the topics with `Before` and `After` State with some metadata into it. Therefore, we will need to create new filtered/clean topics leveraging Flink for these two topics before launching the Redshift Connector. 
+
+### Navigate to Flink Via Internal Windows Machine
+1. Staying in the Windows Jump Server in order to access private Flink
+2. Select `Environments`
+3. Select the environment named after the `confluent_environment_name` output from Terraform
+4. In the horizontal menu select `Flink`
+5. Select `Open SQL workspace`
+
+### Convert Tables to be Compatible Using Flink
+
+1. We will create the first Flink table for `prefix.AUTH_USER` and click `Run`.  
+   ```
+   CREATE TABLE `auth_user` (
+      `ID` DOUBLE,
+      `PASSWORD` VARCHAR(2147483647),
+      `LAST_LOGIN` BIGINT,
+      `IS_SUPERUSER` DOUBLE,
+      `USERNAME` VARCHAR(2147483647),
+      `FIRST_NAME` VARCHAR(2147483647),
+      `LAST_NAME` VARCHAR(2147483647),
+      `EMAIL` VARCHAR(2147483647),
+      `IS_STAFF` DOUBLE,
+      `IS_ACTIVE` DOUBLE,
+      `DATE_JOINED` BIGINT)
+   DISTRIBUTED BY HASH(`ID`) INTO 1 BUCKETS
+   WITH (
+      'changelog.mode' = 'append',
+      'connector' = 'confluent',
+      'kafka.cleanup-policy' = 'delete',
+      'kafka.max-message-size' = '8 mb',
+      'kafka.retention.size' = '0 bytes',
+      'kafka.retention.time' = '7 d',
+      'key.format' = 'json-registry',
+      'scan.bounded.mode' = 'unbounded',
+      'scan.startup.mode' = 'earliest-offset',
+      'value.fields-include' = 'all',
+      'value.format' = 'json-registry'
+   );
+   ```
+2. Create an `INSERT` query to insert into the new table `auth_user` and click `Run`. 
+   ```
+   INSERT INTO `auth_user`
+   SELECT after.ID as ID,
+      after.PASSWORD as PASSWORD,
+      after.LAST_LOGIN as LAST_LOGIN,
+      after.IS_SUPERUSER as IS_SUPERUSER,
+      after.USERNAME as USERNAME,
+      after.FIRST_NAME as FIRST_NAME,
+      after.LAST_NAME as LAST_NAME,
+      after.EMAIL as EMAIL,
+      after.IS_STAFF as IS_STAFF,
+      after.IS_ACTIVE as IS_ACTIVE,
+      after.DATE_JOINED as DATE_JOINED
+   FROM `fd.SAMPLE.AUTH_USER`;
+   ```
+3. To validate, run a `SELECT *` statement.
+   ```
+   SELECT * FROM `auth_user`;
+   ``` 
+
+4. Next create the second table for `prefix.USER_TRANSACTION` and click `Run`.
+    ```
+   CREATE TABLE `user_transaction` (
+      `ID` DOUBLE, 
+      `AMOUNT` DOUBLE, 
+      `RECEIVED_AT` BIGINT, 
+      `IP_ADDRESS` VARCHAR(2147483647), 
+      `ACCOUNT_ID` DOUBLE
+      )
+   DISTRIBUTED BY HASH(`ID`) INTO 1 BUCKETS
+   WITH (
+      'changelog.mode' = 'append',
+      'connector' = 'confluent',
+      'kafka.cleanup-policy' = 'delete',
+      'kafka.max-message-size' = '8 mb',
+      'kafka.retention.size' = '0 bytes',
+      'kafka.retention.time' = '7 d',
+      'key.format' = 'json-registry',
+      'scan.bounded.mode' = 'unbounded',
+      'scan.startup.mode' = 'earliest-offset',
+      'value.format' = 'json-registry'
+   );
+   ```
+5. Create an `INSERT` statement to insert into the new table `user_transaction` and click `Run`.
+   ```
+   INSERT INTO `user_transaction`
+   SELECT after.ID as ID, 
+      after.AMOUNT as AMOUNT, 
+      after.RECEIVED_AT as RECEIVED_AT,
+      after.IP_ADDRESS as IP_ADDRESS, 
+      after.ACCOUNT_ID as ACCOUNT_ID 
+   FROM `fd-.SAMPLE.USER_TRANSACTION`;
+   ```
+6. To verify, run a `SELECT *` statement.
+   ```
+   SELECT * FROM `user_transaction`;
+   ``` 
+
+Now that we have successfully cleaned out the data to be compatible with Redshift, we will navigate back to the `Connectors Hub`.
+
+---
 ## Set Up Redshift Fully Managed Sink Connector 
 Lastly for this lab, we will send the topics to Redshift via the Redshift fully managed Sink Connector. Follow the same steps as setting up the Oracle XStream Source Connector but as a Sink. 
 
@@ -99,7 +205,7 @@ Lastly for this lab, we will send the topics to Redshift via the Redshift fully 
 
 1. Type `redshift sink` in the `search` text field
 2. Select the `Redshift Sink` tile (it will be the only tile)![redshift_connector.png](./assets/redshiftconnector.png)
-3. Select `fd.SAMPLE.AUTH_USER` and `fd.SAMPLE.USER_TRANSACTION`checkboxes in the Topics table 
+3. Select `auth_user` and `user_transaction` checkboxes in the Topics table 
 4. Click the `Continue` button in the bottom right
 5. Generate Connector API Key
    1. Select the `My account`tile 
@@ -113,7 +219,7 @@ Lastly for this lab, we will send the topics to Redshift via the Redshift fully 
    5. Enter `frauddetection` into `Database name`
    6. Click the `Continue` button
 7. Configure Connector Topic & Index settings
-   1. Select `AVRO` option in the `Input Kafka record value format` horizontal selection
+   1. Select `JSON_SR` option in the `Input Kafka record value format` horizontal selection
    2. Select `True` in `Auto create table` select dropdown
    3. Select `False` in `Enable Connector Auto-Restart`
    4. Enter `1` into `Batch size`
@@ -127,4 +233,4 @@ Validate in Redshift that the topics are successfully sent.
 
 ---
 
-To setup the Flink Compute Queries for Real-Time Stream Processing, follow the steps in [Lab 2](../LAB2/LAB2-README.md). 
+After Lab 1 is completed, follow the steps in [Lab 2](../LAB2/LAB2-README.md) to setup the Flink Compute Queries for Real-Time Stream Processing. 
