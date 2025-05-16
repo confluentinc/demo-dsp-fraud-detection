@@ -94,7 +94,7 @@ These events from the Web UI are protected and only available within a private n
 
 
 ---
-## Convert Topics to be Compatible With Redshift Connector
+## (OPTIONAL) Convert Topics to be Compatible With Redshift Connector
 
 Now that we have verified the topics are successfully sent to our Kafka topics, we will now send the events to Redshift via the Redshift Fully Managed Sink Connector. However, the Redshift connector by default cannot process Kafka topics that have nested JSON data as seen in our `prefix.AUTH_USER` & `prefix.USER_TRANSACTION` topics. The Oracle XStream Connector creates the topics with `Before` and `After` State with some metadata into it. Therefore, we will need to create new filtered/clean topics leveraging Flink for these two topics before launching the Redshift Connector. 
 
@@ -188,7 +188,7 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
       after.RECEIVED_AT as RECEIVED_AT,
       after.IP_ADDRESS as IP_ADDRESS, 
       after.ACCOUNT_ID as ACCOUNT_ID 
-   FROM `fd-.SAMPLE.USER_TRANSACTION`;
+   FROM `fd.SAMPLE.USER_TRANSACTION`;
    ```
 6. To verify, run a `SELECT *` statement.
    ```
@@ -229,7 +229,20 @@ Lastly for this lab, we will send the topics to Redshift via the Redshift fully 
 10. Wait for the Connector to initialize; it will take ~5 minutes and you may have to refresh the page
 
 ### View Topic Data in Redshift
-Validate in Redshift that the topics are successfully sent.
+Let's validate in Redshift that the topics are successfully sent.
+
+1. Navigate to Redshift in AWS
+2. Click on the left hamburger icon, and select `Query editor v2`. This will launch you to the SQL editor. 
+3. On the top right, select the cluster as `frauddetectiondemo-redshift-cluster-abcd123` and database as `frauddetection`.
+4. Run a SELECT * statement for `auth_user`:
+```
+SELECT * FROM auth_user limit 100;
+```
+5. Click on the `+` on the top left to create a new editor and run another SELECT * statement for `user_transaction`:
+```
+SELECT * FROM user_transaction limit 100;
+```
+![redshift_query_editor](./assets/redshift_query_editor.png)
 
 ---
 
