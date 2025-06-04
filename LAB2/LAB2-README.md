@@ -17,7 +17,7 @@ In this lab, we will proceed to establish real-time stream processing of Kafka T
 
 ### Navigate to Flink Via Internal Windows Machine
 These events are protected and only available within the private network; therefore, we will need to access the events from the internal windows jump server. 
-
+>[NOTE]: You can skip this section if you have already completed this in Lab 1.
 1. Reopen the Windows Jump Server; this is the server setup in the [access the internal Windows machine section](#access-the-internal-windows-machine)
 2. Log into [Confluent Cloud](https://confluent.cloud/login)
 3. Select `Environments`
@@ -66,7 +66,7 @@ These events are protected and only available within the private network; theref
    
 
    ```
-   SET 'client.statement-name' = 'flagged-user-materializer';
+    SET 'client.statement-name' = 'flagged-user-materializer';
     CREATE TABLE flagged_user (
       ACCOUNT_ID DOUBLE, 
       user_name STRING,
@@ -80,30 +80,30 @@ These events are protected and only available within the private network; theref
     WITH transactions_per_customer_10m AS 
     (
       SELECT 
-        `after`.`ACCOUNT_ID` AS ACCOUNT_ID,
-        SUM(`after`.`AMOUNT`) OVER w AS total_amount,
+        ACCOUNT_ID,
+        SUM(AMOUNT) OVER w AS total_amount,
         COUNT(*) OVER w AS transaction_count,
         `$rowtime` AS transaction_time
-      FROM `fd.SAMPLE.USER_TRANSACTION`
+      FROM user_transaction
       WINDOW w AS (
-        PARTITION BY `after`.`ACCOUNT_ID`
+        PARTITION BY ACCOUNT_ID
         ORDER BY `$rowtime`
         RANGE BETWEEN INTERVAL '10' MINUTE PRECEDING AND CURRENT ROW
       )
     ) 
     SELECT 
-      COALESCE(transactions.`ACCOUNT_ID`, 0) AS ACCOUNT_ID,
-      u.`after`.`USERNAME` AS user_name,
-      u.`after`.`EMAIL` AS email,
-      transactions.`total_amount`,
-      transactions.`transaction_count`,
-      transactions.`transaction_time` AS updated_at
+      COALESCE(transactions.ACCOUNT_ID, 0) AS ACCOUNT_ID,
+      u.USERNAME AS user_name,
+      u.EMAIL AS email,
+      transactions.total_amount,
+      transactions.transaction_count,
+      transactions.transaction_time AS updated_at
     FROM 
       transactions_per_customer_10m AS transactions
-    JOIN `fd.SAMPLE.AUTH_USER` AS u 
-      ON transactions.ACCOUNT_ID = u.`after`.`ID`
+    JOIN auth_user AS u 
+      ON transactions.ACCOUNT_ID = u.ID
     WHERE 
-      transactions.total_amount > 1000 OR transactions.transaction_count > 10;
+      transactions.total_amount > 1000 OR transactions.transaction_count > 10; 
    ```
 3. Click the `Run` button below the bottom right of the Flink SQL Query Text Card and results will pop up
 
@@ -138,7 +138,7 @@ We will now stream the real-time fraud Kafka events generated through the Flink 
 5. Select `Connectors` in the Cluster sidebar menu on the left
 6. Click `+ add connector` button in top right of the view
 
-### Create OpenSearch Sink Managed Connector V1
+### Create OpenSearch Sink Managed Connector 
 
 1. Type `opensearch sink` in the `search` text field
 2. Select the `OpenSearch Sink` tile (it will be the only tile)
@@ -156,7 +156,7 @@ We will now stream the real-time fraud Kafka events generated through the Flink 
    5. Select `false` on the `SSL_Enabled` dropdown
    6. Click the `Continue` button
 7. Configure Connector Topic & Index settings![opensearch_topic_mapping.png](./assets/opensearch_topic_mapping.png)
-   1. Select `ARVO` option in the `Input Kafka record value format` horizontal selection
+   1. Select `AVRO` option in the `Input Kafka record value format` horizontal selection
    2. Select `1` in `Number of indexes` select dropdown
    3. Enter `flagged_user` in only `index` textbox
    4. Enter `flagged_user` in only `topic` textbox **Note:** This should be the name of the table you [created with the flink detection sql query](#create-real-time-flink-processing-to-identify-fraudulent-events)
@@ -207,10 +207,10 @@ We will now stream the real-time fraud Kafka events generated through the Flink 
 
 ## Teardown
 
-First, let's manually tear down the 3 connectors that we have manually spun up: Oracle XStream CDC Connector, Redshift Sink Connector, and OpenSearch Sink Connector
+Again, let's manually tear down the OpenSearch Sink connectors that we have manually spun up:.
 
-1. Navigate back to the Connectors Tab and Select Oracle XStream CDC Connector
-2. Click on Settings Tab and Click on `Delete Connector` at the bottom of the page and confirm by typing in your connector's name.![delete_connector.png](./assets/delete_connector.png)
+1. Navigate back to the Connectors Tab and Select OpenSearch Sink Connector
+2. Click on Settings Tab and Click on `Delete Connector` at the bottom of the page and confirm by typing in your connector's name.![delete_opensearch_connector.png](./assets/delete_opensearch_connector.png)
 3. Do the same for the other connectors.
 
 Next, run the following command from the same directory as the `README.md` file to teardown the resources spun up from terraform.

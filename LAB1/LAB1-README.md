@@ -46,8 +46,8 @@ The following steps will result in database change events on the `DEMODB` databa
    9. Enter `1` into `Total number of Oracle processors to license` textbox
    10. Click the `Continue` button on the bottom right
 5. Configure Connector settings ![oracle_connector_configs.png](./assets/oracle_xstream_connector_config.png)
-   1. Select `JSON_SR` on the `Output Kafka record key format` select dropdown
-   2. Select `JSON_SR` on the `Output Kafka record value format` select dropdown
+   1. Select `AVRO` on the `Output Kafka record key format` select dropdown
+   2. Select `AVRO` on the `Output Kafka record value format` select dropdown
    3. Enter `fd` into `Topic prefix` textbox
    4. Click on `Show advanced configurations` dropdown
    5. Select `DOUBLE` for `Decimal handling 
@@ -107,7 +107,11 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
 
 ### Convert Tables to be Compatible Using Flink
 
-1. We will create the first Flink table for `prefix.AUTH_USER` and click `Run`.  
+1. First, we will alter `prefix.AUTH_USER`.
+   ```
+   ALTER TABLE `fd.SAMPLE.AUTH_USER` SET ('changelog.mode' = 'append' , 'value.format' = 'avro-registry');
+   ```
+2. Create the first Flink table for `prefix.AUTH_USER` and click `Run`.  
    ```
    CREATE TABLE `auth_user` (
       `ID` DOUBLE,
@@ -129,14 +133,14 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
       'kafka.max-message-size' = '8 mb',
       'kafka.retention.size' = '0 bytes',
       'kafka.retention.time' = '7 d',
-      'key.format' = 'json-registry',
+      'key.format' = 'avro-registry',
       'scan.bounded.mode' = 'unbounded',
       'scan.startup.mode' = 'earliest-offset',
       'value.fields-include' = 'all',
-      'value.format' = 'json-registry'
+      'value.format' = 'avro-registry'
    );
    ```
-2. Create an `INSERT` query to insert into the new table `auth_user` and click `Run`. 
+3. Create an `INSERT` query to insert into the new table `auth_user` and click `Run`. 
    ```
    INSERT INTO `auth_user`
    SELECT after.ID as ID,
@@ -152,12 +156,15 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
       after.DATE_JOINED as DATE_JOINED
    FROM `fd.SAMPLE.AUTH_USER`;
    ```
-3. To validate, run a `SELECT *` statement.
+4. To validate, run a `SELECT *` statement.
    ```
    SELECT * FROM `auth_user`;
    ``` 
-
-4. Next create the second table for `prefix.USER_TRANSACTION` and click `Run`.
+5. Next we will alter `prefix.USER_TRANSACTION`.
+   ```
+   ALTER TABLE `fd.SAMPLE.USER_TRANSACTION` SET ('changelog.mode' = 'append' , 'value.format' = 'avro-registry');
+   ```
+6. Create the second table for `prefix.USER_TRANSACTION` and click `Run`.
     ```
    CREATE TABLE `user_transaction` (
       `ID` DOUBLE, 
@@ -174,10 +181,10 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
       'kafka.max-message-size' = '8 mb',
       'kafka.retention.size' = '0 bytes',
       'kafka.retention.time' = '7 d',
-      'key.format' = 'json-registry',
+      'key.format' = 'avro-registry',
       'scan.bounded.mode' = 'unbounded',
       'scan.startup.mode' = 'earliest-offset',
-      'value.format' = 'json-registry'
+      'value.format' = 'avro-registry'
    );
    ```
 5. Create an `INSERT` statement to insert into the new table `user_transaction` and click `Run`.
@@ -188,7 +195,7 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
       after.RECEIVED_AT as RECEIVED_AT,
       after.IP_ADDRESS as IP_ADDRESS, 
       after.ACCOUNT_ID as ACCOUNT_ID 
-   FROM `fd.SAMPLE.USER_TRANSACTION`;
+   FROM `fd-.SAMPLE.USER_TRANSACTION`;
    ```
 6. To verify, run a `SELECT *` statement.
    ```
@@ -219,7 +226,7 @@ Lastly for this lab, we will send the topics to Redshift via the Redshift fully 
    5. Enter `frauddetection` into `Database name`
    6. Click the `Continue` button
 7. Configure Connector Topic & Index settings
-   1. Select `JSON_SR` option in the `Input Kafka record value format` horizontal selection
+   1. Select `AVRO` option in the `Input Kafka record value format` horizontal selection
    2. Select `True` in `Auto create table` select dropdown
    3. Select `False` in `Enable Connector Auto-Restart`
    4. Enter `1` into `Batch size`
@@ -242,7 +249,16 @@ SELECT * FROM auth_user limit 100;
 ```
 SELECT * FROM user_transaction limit 100;
 ```
-![redshift_query_editor](./assets/redshift_query_editor.png)
+![redshift_query_editor.png](./assets/redshift_query_editor.png)
+
+---
+## Teardown
+
+Let's manually tear down the 2 connectors that we have manually spun up: Oracle XStream CDC Connector and Redshift Sink Connector.
+
+1. Navigate back to the Connectors Tab and Select Oracle XStream CDC Connector
+2. Click on Settings Tab and Click on `Delete Connector` at the bottom of the page and confirm by typing in your connector's name.![delete_connectors.png](./assets/delete_connectors.png)
+3. Do the same for Redshift.
 
 ---
 
