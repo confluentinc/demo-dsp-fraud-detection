@@ -82,24 +82,21 @@ Now that all the Infrastructure is provisioned and the database connector is pro
 
 ### Validate Transactions are Streamed to Topic via Connector
 
-These events from the Web UI are protected and only available within a private network; therefore, we will need to access the events from the internal windows jump server that we spun up in the prerequisite. 
-
-1. Reopen the Windows Jump Server
-2. From there, log into [Confluent Cloud](https://confluent.cloud/login)
-3. Select `Environments`
-4. Select the environment named after the `confluent_environment_name` output from Terraform
-5. Select the cluster named after the `confluent_cluster_name` output from Terraform
-6. Select `Topics` in the Cluster sidebar menu on the left
-7. Examine the `Topic name` table column; the `prefix.AUTH_USER` & `prefix.USER_TRANSACTION` topics will exist. **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of setting up the Oracle XStream CDC connector.
+1. Log into [Confluent Cloud](https://confluent.cloud/login)
+2. Select `Environments`
+3. Select the environment named after the `confluent_environment_name` output from Terraform
+4. Select the cluster named after the `confluent_cluster_name` output from Terraform
+5. Select `Topics` in the Cluster sidebar menu on the left
+6. Examine the `Topic name` table column; the `prefix.AUTH_USER` & `prefix.USER_TRANSACTION` topics will exist. **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of setting up the Oracle XStream CDC connector.
 
 
 ---
-## (OPTIONAL) Convert Topics to be Compatible With Redshift Connector
+## Convert Topics to be Compatible With Redshift Connector
 
 Now that we have verified the topics are successfully sent to our Kafka topics, we will now send the events to Redshift via the Redshift Fully Managed Sink Connector. However, the Redshift connector by default cannot process Kafka topics that have nested JSON data as seen in our `prefix.AUTH_USER` & `prefix.USER_TRANSACTION` topics. The Oracle XStream Connector creates the topics with `Before` and `After` State with some metadata into it. Therefore, we will need to create new filtered/clean topics leveraging Flink for these two topics before launching the Redshift Connector. 
 
 ### Navigate to Flink Via Internal Windows Machine
-1. Staying in the Windows Jump Server in order to access private Flink
+1. Log into [Confluent Cloud](https://confluent.cloud/login)
 2. Select `Environments`
 3. Select the environment named after the `confluent_environment_name` output from Terraform
 4. In the horizontal menu select `Flink`
@@ -107,12 +104,12 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
 
 ### Convert Tables to be Compatible Using Flink
 
-1. First, we will alter `prefix.AUTH_USER`.
-   ```
+1. First, we will alter `prefix.AUTH_USER` changelog to `avro-registry` instead of `debezium`.
+   ```sql
    ALTER TABLE `fd.SAMPLE.AUTH_USER` SET ('changelog.mode' = 'append' , 'value.format' = 'avro-registry');
    ```
 2. Create the first Flink table for `prefix.AUTH_USER` and click `Run`.  
-   ```
+   ```sql
    CREATE TABLE `auth_user` (
       `ID` DOUBLE,
       `PASSWORD` VARCHAR(2147483647),
@@ -141,7 +138,7 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
    );
    ```
 3. Create an `INSERT` query to insert into the new table `auth_user` and click `Run`. 
-   ```
+   ```sql
    INSERT INTO `auth_user`
    SELECT after.ID as ID,
       after.PASSWORD as PASSWORD,
@@ -157,15 +154,15 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
    FROM `fd.SAMPLE.AUTH_USER`;
    ```
 4. To validate, run a `SELECT *` statement.
-   ```
+   ```sql
    SELECT * FROM `auth_user`;
    ``` 
-5. Next we will alter `prefix.USER_TRANSACTION`.
-   ```
+5. Next we will do the same for `prefix.USER_TRANSACTION`.
+   ```sql
    ALTER TABLE `fd.SAMPLE.USER_TRANSACTION` SET ('changelog.mode' = 'append' , 'value.format' = 'avro-registry');
    ```
 6. Create the second table for `prefix.USER_TRANSACTION` and click `Run`.
-    ```
+    ```sql
    CREATE TABLE `user_transaction` (
       `ID` DOUBLE, 
       `AMOUNT` DOUBLE, 
@@ -188,7 +185,7 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
    );
    ```
 5. Create an `INSERT` statement to insert into the new table `user_transaction` and click `Run`.
-   ```
+   ```sql
    INSERT INTO `user_transaction`
    SELECT after.ID as ID, 
       after.AMOUNT as AMOUNT, 
