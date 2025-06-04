@@ -46,8 +46,8 @@ The following steps will result in database change events on the `DEMODB` databa
    9. Enter `1` into `Total number of Oracle processors to license` textbox
    10. Click the `Continue` button on the bottom right
 5. Configure Connector settings ![oracle_connector_configs.png](./assets/oracle_xstream_connector_config.png)
-   1. Select `JSON_SR` on the `Output Kafka record key format` select dropdown
-   2. Select `JSON_SR` on the `Output Kafka record value format` select dropdown
+   1. Select `AVRO` on the `Output Kafka record key format` select dropdown
+   2. Select `AVRO` on the `Output Kafka record value format` select dropdown
    3. Enter `fd` into `Topic prefix` textbox
    4. Click on `Show advanced configurations` dropdown
    5. Select `DOUBLE` for `Decimal handling 
@@ -82,24 +82,21 @@ Now that all the Infrastructure is provisioned and the database connector is pro
 
 ### Validate Transactions are Streamed to Topic via Connector
 
-These events from the Web UI are protected and only available within a private network; therefore, we will need to access the events from the internal windows jump server that we spun up in the prerequisite. 
-
-1. Reopen the Windows Jump Server
-2. From there, log into [Confluent Cloud](https://confluent.cloud/login)
-3. Select `Environments`
-4. Select the environment named after the `confluent_environment_name` output from Terraform
-5. Select the cluster named after the `confluent_cluster_name` output from Terraform
-6. Select `Topics` in the Cluster sidebar menu on the left
-7. Examine the `Topic name` table column; the `prefix.AUTH_USER` & `prefix.USER_TRANSACTION` topics will exist. **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of setting up the Oracle XStream CDC connector.
+1. Log into [Confluent Cloud](https://confluent.cloud/login)
+2. Select `Environments`
+3. Select the environment named after the `confluent_environment_name` output from Terraform
+4. Select the cluster named after the `confluent_cluster_name` output from Terraform
+5. Select `Topics` in the Cluster sidebar menu on the left
+6. Examine the `Topic name` table column; the `prefix.AUTH_USER` & `prefix.USER_TRANSACTION` topics will exist. **Note:** your prefix may differ based on how you configured the `table prefix` in the connector settings in step 5 of setting up the Oracle XStream CDC connector.
 
 
 ---
-## (OPTIONAL) Convert Topics to be Compatible With Redshift Connector
+## Convert Topics to be Compatible With Redshift Connector
 
 Now that we have verified the topics are successfully sent to our Kafka topics, we will now send the events to Redshift via the Redshift Fully Managed Sink Connector. However, the Redshift connector by default cannot process Kafka topics that have nested JSON data as seen in our `prefix.AUTH_USER` & `prefix.USER_TRANSACTION` topics. The Oracle XStream Connector creates the topics with `Before` and `After` State with some metadata into it. Therefore, we will need to create new filtered/clean topics leveraging Flink for these two topics before launching the Redshift Connector. 
 
 ### Navigate to Flink Via Internal Windows Machine
-1. Staying in the Windows Jump Server in order to access private Flink
+1. Log into [Confluent Cloud](https://confluent.cloud/login)
 2. Select `Environments`
 3. Select the environment named after the `confluent_environment_name` output from Terraform
 4. In the horizontal menu select `Flink`
@@ -107,37 +104,12 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
 
 ### Convert Tables to be Compatible Using Flink
 
-1. We will create the first Flink table for `prefix.AUTH_USER` and click `Run`.  
+1. First, we will alter `prefix.AUTH_USER` changelog to `avro-registry` instead of `debezium`.
+   ```sql
+   ALTER TABLE `fd.SAMPLE.AUTH_USER` SET ('changelog.mode' = 'append' , 'value.format' = 'avro-registry');
    ```
-   CREATE TABLE `auth_user` (
-      `ID` DOUBLE,
-      `PASSWORD` VARCHAR(2147483647),
-      `LAST_LOGIN` BIGINT,
-      `IS_SUPERUSER` DOUBLE,
-      `USERNAME` VARCHAR(2147483647),
-      `FIRST_NAME` VARCHAR(2147483647),
-      `LAST_NAME` VARCHAR(2147483647),
-      `EMAIL` VARCHAR(2147483647),
-      `IS_STAFF` DOUBLE,
-      `IS_ACTIVE` DOUBLE,
-      `DATE_JOINED` BIGINT)
-   DISTRIBUTED BY HASH(`ID`) INTO 1 BUCKETS
-   WITH (
-      'changelog.mode' = 'append',
-      'connector' = 'confluent',
-      'kafka.cleanup-policy' = 'delete',
-      'kafka.max-message-size' = '8 mb',
-      'kafka.retention.size' = '0 bytes',
-      'kafka.retention.time' = '7 d',
-      'key.format' = 'json-registry',
-      'scan.bounded.mode' = 'unbounded',
-      'scan.startup.mode' = 'earliest-offset',
-      'value.fields-include' = 'all',
-      'value.format' = 'json-registry'
-   );
-   ```
-2. Create an `INSERT` query to insert into the new table `auth_user` and click `Run`. 
-   ```
+2. Create new `auth_user` table to flatten out `fd.SAMPLE.AUTH_USER` and click `Run`. 
+   ```sql
    INSERT INTO `auth_user`
    SELECT after.ID as ID,
       after.PASSWORD as PASSWORD,
@@ -152,37 +124,19 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
       after.DATE_JOINED as DATE_JOINED
    FROM `fd.SAMPLE.AUTH_USER`;
    ```
-3. To validate, run a `SELECT *` statement.
-   ```
+4. To validate, run a `SELECT *` statement.
+   ```sql
    SELECT * FROM `auth_user`;
    ``` 
+5. Next we will do the same for `prefix.USER_TRANSACTION`.
+   ```sql
+   ALTER TABLE `fd.SAMPLE.USER_TRANSACTION` SET ('changelog.mode' = 'append' , 'value.format' = 'avro-registry');
+   ```
+6. Create new `user_transaction` table to flatten out `fd.SAMPLE.USER_TRANSACTION` and click `Run`. 
 
-4. Next create the second table for `prefix.USER_TRANSACTION` and click `Run`.
-    ```
-   CREATE TABLE `user_transaction` (
-      `ID` DOUBLE, 
-      `AMOUNT` DOUBLE, 
-      `RECEIVED_AT` BIGINT, 
-      `IP_ADDRESS` VARCHAR(2147483647), 
-      `ACCOUNT_ID` DOUBLE
-      )
-   DISTRIBUTED BY HASH(`ID`) INTO 1 BUCKETS
-   WITH (
-      'changelog.mode' = 'append',
-      'connector' = 'confluent',
-      'kafka.cleanup-policy' = 'delete',
-      'kafka.max-message-size' = '8 mb',
-      'kafka.retention.size' = '0 bytes',
-      'kafka.retention.time' = '7 d',
-      'key.format' = 'json-registry',
-      'scan.bounded.mode' = 'unbounded',
-      'scan.startup.mode' = 'earliest-offset',
-      'value.format' = 'json-registry'
-   );
-   ```
-5. Create an `INSERT` statement to insert into the new table `user_transaction` and click `Run`.
-   ```
-   INSERT INTO `user_transaction`
+   ```sql
+   CREATE TABLE `user_transaction`
+   AS
    SELECT after.ID as ID, 
       after.AMOUNT as AMOUNT, 
       after.RECEIVED_AT as RECEIVED_AT,
@@ -219,7 +173,7 @@ Lastly for this lab, we will send the topics to Redshift via the Redshift fully 
    5. Enter `frauddetection` into `Database name`
    6. Click the `Continue` button
 7. Configure Connector Topic & Index settings
-   1. Select `JSON_SR` option in the `Input Kafka record value format` horizontal selection
+   1. Select `AVRO` option in the `Input Kafka record value format` horizontal selection
    2. Select `True` in `Auto create table` select dropdown
    3. Select `False` in `Enable Connector Auto-Restart`
    4. Enter `1` into `Batch size`
@@ -242,7 +196,16 @@ SELECT * FROM auth_user limit 100;
 ```
 SELECT * FROM user_transaction limit 100;
 ```
-![redshift_query_editor](./assets/redshift_query_editor.png)
+![redshift_query_editor.png](./assets/redshift_query_editor.png)
+
+---
+## Teardown
+
+Let's manually tear down the 2 connectors that we have manually spun up: Oracle XStream CDC Connector and Redshift Sink Connector.
+
+1. Navigate back to the Connectors Tab and Select Oracle XStream CDC Connector
+2. Click on Settings Tab and Click on `Delete Connector` at the bottom of the page and confirm by typing in your connector's name.![delete_connectors.png](./assets/delete_connectors.png)
+3. Do the same for Redshift.
 
 ---
 

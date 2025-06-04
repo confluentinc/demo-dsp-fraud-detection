@@ -18,10 +18,10 @@ resource "confluent_environment" "staging" {
 # ------------------------------------------------------
 resource "confluent_kafka_cluster" "cluster" {
   display_name = "${var.prefix}-cluster-${random_id.env_display_id.hex}"
-  availability = "MULTI_ZONE"
+  availability = "SINGLE_ZONE"
   cloud        = "AWS"
   region       = var.region
-  enterprise {}
+  standard {}
   environment {
     id = confluent_environment.staging.id
   }

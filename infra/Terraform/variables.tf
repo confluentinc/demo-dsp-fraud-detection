@@ -114,14 +114,3 @@ variable "webapp_namespace" {
   default     = "frauddemo"
 }
 
-variable "windows_jump_server_password" {
-  description = "Windows Jump server Admin Password"
-  type        = string
-  default     = "thatsAGoodPass"
-}
-
-variable "reject_connections_script" {
-  description = "This script must be specified depending on the operating system"
-  type        = string
-  default     = "./reject_connections.sh"
-}

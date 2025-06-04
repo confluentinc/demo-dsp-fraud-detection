@@ -9,11 +9,11 @@ This demo demonstrates how financial institutions can capture fraudulent transac
 ![architecture_diagram.png](img/architecture.png)
 The Demo was built to reflect a typical software production environment. It contains many common components such as:
 - An EKS Kubernetes cluster hosts an app that can be accessed via the web
-- An Oracle DB on a private internal network; no production database is publicly accessible
+- An Oracle DB
 
 Real-Time fraud detection is achieved by adding a few more components:
 - A Kafka Cluster to store, stream & manage transaction & fraud events
-- An Oracle XStream Connector to stream database entries as Kafka events privately into a Kafka cluster hosted on Confluent Cloud
+- An Oracle XStream Connector to stream database entries as Kafka events.
 - A Flink Compute Pool to enrich transaction events from Oracle and morph them into data products for real-time fraud analysis 
 - A Redshift Instance and Redshift Fully Managed Sink Connector to stream authentication and user transaction events for storage
 - An OpenSearch Instance and OpenSearch Fully Managed Sink Connector to stream fraud events into dashboards for analysis and decision-making
@@ -74,13 +74,7 @@ Confluent Cloud `Cloud resource management` API keys are required to provision t
 6. Create the API key and copy the Key & Secret into a usable place
 </details>   
 
-### Install Windows Jump Server 
 
-A Jump server on the internal network is required to connect to the Oracle DB that will be on a private internal network; the following software will allow you to connect to this jump server. Download this application called `Windows App` if you are on macOS.
-
-If you are on Windows, it normally comes with preinstalled Remote Desktop Connection software. If for some reason it is missing, follow [these steps](https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/remotepc/uninstall-remote-desktop-connection?tabs=gui#reinstall-remote-desktop-connection) to re-enable it.
-
----
 
 ## Provision Infrastructure with Terraform
 Terraform is used to automatically provision and configure infrastructure for both AWS and CC. 
@@ -98,7 +92,7 @@ All variables in the table below must be set in the terraform.tfvars file in ord
 |:---------------------------|:------:|:--------------------------------------|-------------:|
 | confluent_cloud_api_key    | string | [Key From CC](#create_cc_api_key)     |         True |
 | confluent_cloud_api_secret | string | [Secret From CC](#create_cc_api_key)  |         True |
-| reject_connections_script  | string | reject_connections.bat                | Windows only |
+
 
 
 ### Provision Infrastructure via Terraform
@@ -115,39 +109,9 @@ Run the following commands from the same directory as the `README.md` file in or
    terraform -chdir=infra/Terraform apply --auto-approve
    ```
 
-If it fails initially rerun the apply; it will only take 5-7 minutes & will work the second time.   
-
-   ```text
-   │ Error: error waiting for Access Point "abc123" to provision: access point "abc123" provisioning status is "FAILED": 
-   │ 
-   │   with confluent_access_point.confluent_oracle_db_access_point,
-   │   on confluent_outbound_privatelink.tf line 15, in resource "confluent_access_point" "confluent_oracle_db_access_point":
-   │   15: resource "confluent_access_point" "confluent_oracle_db_access_point" {
-   │ 
-   ╵
-   ```
 
 ---
-### Access The Internal Windows Machine
 
-The Oracle DB is configured on a private network within AWS, making it inaccessible from your local machine, and only accessibile from a machine within the private network.
-
-This machine existing within the AWS private network has already been setup by Terraform and can be accessed using `Windows App` application that we downloaded earlier.
-
-1. Open the `Windows App`![windows_app_view.png](img/windows_app_view.png)
-2. Click the `+` Icon to add new Server Connection, Click `Add PC` from the dropdown menu
-3. Enter `windows_instance_ip` value from Terraform outputs in the `PC name:` textbox
-4. Click the `Credentials` dropdown menu, select `Add Credentials...`, A pop up menu will appear
-5. Enter `windows_instance_username` value from Terraform outputs into the `Username:` text field
-6. Enter `windows_instance_password` value from Terraform outputs into the `Password:` text field
-7. Click the `Add` button in the bottom right of the credentials pop up 
-8. Click the `Add` button in the bottom right of the instance pop up
-9. Click the newly created pop up titled with the `windows_instance_ip`
-10. You will be redirected to a Windows OS for the machine located the AWS Oracle DB network
-
-> [!NOTE]
-> On Windows use Remote Desktop Connection and follow the prompts.
----
 ## Labs
 
 There are two labs to demonstrate two different use cases with Confluent Cloud. 
