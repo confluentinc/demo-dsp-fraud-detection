@@ -1,9 +1,9 @@
 # Real Time Fraud Detection With Confluent Cloud
-This demo will enable you to provision and test **real time** fraud detection using Private DB Connectors, Kafka event streams & real time Flink processing all easily orchestrated on Confluent Cloud. 
+This demo will enable you to provision and test **real time** fraud detection using Connectors, Kafka event streams & real time Flink processing all easily orchestrated on Confluent Cloud. 
 
 Fraud detection is crucial for protecting the financial assets of individuals and organizations in an increasingly digital world, leveraging analytical technologies to identify and prevent unethical activities and costly consequences. As digital transactions become more common, the complexity of fraud schemes also increases, requiring sophisticated detection methods. Modern methods like integrating advanced analytical and artificial intelligence algorithms help in identifying complex fraudulent patterns within vast datasets. 
 
-This demo demonstrates how financial institutions can capture fraudulent transactions in real-time from databases that are on secure internal private networks by leveraging stream processing and private connectors.Through stream processing with Flink, transactions are joined, filtered, aggregated and analyzed in real time, while private connectors ensure that data flows securely between systems, offering a robust solution for modern fraud detection.
+This demo demonstrates how financial institutions can capture fraudulent transactions in real-time from databases by leveraging stream processing and connectors. Through stream processing with Flink, transactions are joined, filtered, aggregated and analyzed in real time, offering a robust solution for modern fraud detection.
 
 ## Demo Diagram
 ![architecture_diagram.png](img/architecture.png)
@@ -74,7 +74,10 @@ Confluent Cloud `Cloud resource management` API keys are required to provision t
 6. Create the API key and copy the Key & Secret into a usable place
 </details>   
 
-
+## Clone the Repo
+```
+git clone https://github.com/confluentinc/demo-dsp-fraud-detection.git
+```
 
 ## Provision Infrastructure with Terraform
 Terraform is used to automatically provision and configure infrastructure for both AWS and CC. 
@@ -84,7 +87,11 @@ Terraform is used to automatically provision and configure infrastructure for bo
 
 
 ### Set Terraform Variables
-Terraform is configured via a terraform.tfvars file that users will create manually.
+Terraform is configured via a terraform.tfvars file that users will create manually. Keep the terraform.tfvars in `infra/Terraform` directory.
+
+``` 
+nano terraform.tfvars 
+```
 
 All variables in the table below must be set in the terraform.tfvars file in order for Terraform to provision the infrastructure.
 

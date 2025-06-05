@@ -1,7 +1,7 @@
 # Lab 1
 In this lab, we will set up and validate the Oracle XStream CDC Fully Managed Source Connector by simulating transactions into a Web UI connected to the Oracle database.
 
-
+![Architecture](./assets/LAB1_architecture.png)
 ---
 
 ## Table of Contents
@@ -46,8 +46,8 @@ The following steps will result in database change events on the `DEMODB` databa
    9. Enter `1` into `Total number of Oracle processors to license` textbox
    10. Click the `Continue` button on the bottom right
 5. Configure Connector settings ![oracle_connector_configs.png](./assets/oracle_xstream_connector_config.png)
-   1. Select `AVRO` on the `Output Kafka record key format` select dropdown
-   2. Select `AVRO` on the `Output Kafka record value format` select dropdown
+   1. Select `JSON_SR` on the `Output Kafka record key format` select dropdown
+   2. Select `JSON_SR` on the `Output Kafka record value format` select dropdown
    3. Enter `fd` into `Topic prefix` textbox
    4. Click on `Show advanced configurations` dropdown
    5. Select `DOUBLE` for `Decimal handling 
@@ -99,8 +99,9 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
 1. Log into [Confluent Cloud](https://confluent.cloud/login)
 2. Select `Environments`
 3. Select the environment named after the `confluent_environment_name` output from Terraform
-4. In the horizontal menu select `Flink`
-5. Select `Open SQL workspace`
+4. In the left vertical menu select `Flink`
+5. Click on the `Compute Pools` tab to see the provisioned Flink compute pool
+6. Select `Open SQL workspace`
 
 ### Convert Tables to be Compatible Using Flink
 
@@ -157,6 +158,7 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
    ```sql
    SELECT * FROM `auth_user`;
    ``` 
+   ![auth_user](./assets/auth_user.png)
 5. Next we will do the same for `prefix.USER_TRANSACTION`.
    ```sql
    ALTER TABLE `fd.SAMPLE.USER_TRANSACTION` SET ('changelog.mode' = 'append' , 'value.format' = 'avro-registry');
@@ -195,9 +197,10 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
    FROM `fd-.SAMPLE.USER_TRANSACTION`;
    ```
 6. To verify, run a `SELECT *` statement.
-   ```
+   ```sql
    SELECT * FROM `user_transaction`;
    ``` 
+   ![user_transaction](./assets/user_transaction.png)
 
 Now that we have successfully cleaned out the data to be compatible with Redshift, we will navigate back to the `Connectors Hub`.
 
