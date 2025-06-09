@@ -80,7 +80,7 @@ resource "aws_instance" "oracle_instance" {
   ami = data.aws_ami.oracle_ami.id
   instance_type = "t3.large"
   key_name      = aws_key_pair.tf_key.key_name
-  subnet_id              = aws_subnet.private_subnets[0].id # Associate with the first public subnet - put this in private subnet?
+  subnet_id              = aws_subnet.public_subnets[0].id # Associate with the first public subnet - put this in private subnet?
 
 
   vpc_security_group_ids = [aws_security_group.allow_ssh_oracle.id]
@@ -301,7 +301,7 @@ output "oracle_vm_db_details" {
 
 output "oracle_xstream_connector" {
   value = {
-    database_hostname = aws_instance.oracle_instance.private_dns
+    database_hostname = aws_instance.oracle_instance.public_dns
     database_port = var.oracle_db_port
     database_username = var.oracle_xstream_user_username
     database_password = nonsensitive(var.oracle_xstream_user_password)

@@ -39,7 +39,7 @@ resource "aws_redshift_cluster" "redshift_cluster" {
   database_name         = "frauddetection"
   master_username       = "admin"
   master_password       = "Admin123456!"
-  node_type            = "dc2.large"
+  node_type            = "ra3.large"
   cluster_type         = "single-node"
   skip_final_snapshot  = true
   cluster_subnet_group_name = aws_redshift_subnet_group.redshift_subnet_group.name
