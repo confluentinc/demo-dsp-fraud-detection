@@ -194,7 +194,7 @@ Now that we have verified the topics are successfully sent to our Kafka topics, 
       after.RECEIVED_AT as RECEIVED_AT,
       after.IP_ADDRESS as IP_ADDRESS, 
       after.ACCOUNT_ID as ACCOUNT_ID 
-   FROM `fd-.SAMPLE.USER_TRANSACTION`;
+   FROM `fd.SAMPLE.USER_TRANSACTION`;
    ```
 6. To verify, run a `SELECT *` statement.
    ```sql
