@@ -149,14 +149,6 @@ resource "aws_security_group" "sg" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    security_groups = [aws_security_group.windows_sg.id]
-  }
-
-
-  ingress {
     from_port = 9092
     to_port = 9092
     protocol = "tcp"
