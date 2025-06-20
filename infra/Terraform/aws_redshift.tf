@@ -44,6 +44,9 @@ resource "aws_redshift_cluster" "redshift_cluster" {
   skip_final_snapshot  = true
   cluster_subnet_group_name = aws_redshift_subnet_group.redshift_subnet_group.name
   vpc_security_group_ids    = [aws_security_group.redshift_sg.id]
+  
+  # Explicitly disable multi-AZ to prevent auto-failover conflicts
+  multi_az = false
 
   tags = {
     Name = "${var.prefix}-redshift-cluster-${random_id.env_display_id.hex}"
